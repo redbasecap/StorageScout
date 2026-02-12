@@ -1,0 +1,201 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the RAKO Scout application, authenticated via an external system like Google OAuth. This entity stores minimal user information for data ownership and personalization.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity. This ID is typically provided by the external authentication system (e.g., Google ID) and serves as the primary key."
+        },
+        "email": {
+          "type": "string",
+          "description": "The email address of the user, obtained from the authentication provider. Used for contact and identification.",
+          "format": "email"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The public display name of the user, obtained from the authentication provider, for personalized greetings."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the user's record was first created in the application.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating the last time the user's record was updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "createdAt"
+      ]
+    },
+    "RakoBox": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "RakoBox",
+      "type": "object",
+      "description": "Represents a physical RAKO storage box. Each box is identified by a unique UUID from its QR code and stores its physical location.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the RakoBox entity. This is the UUID scanned from the box's QR code and serves as the primary key."
+        },
+        "name": {
+          "type": "string",
+          "description": "An optional, user-friendly name assigned to the RAKO box (e.g., 'Garage Shelf Box', 'Attic Storage')."
+        },
+        "location": {
+          "type": "string",
+          "description": "The current physical storage location where the RAKO box is kept (e.g., 'Garage Shelf 3', 'Attic Corner')."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User who owns or manages this RAKO box. (Relationship: User 1:N RakoBox)"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the RakoBox record was first created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating the last time the RakoBox record was updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "location",
+        "userId",
+        "createdAt"
+      ]
+    },
+    "Item": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Item",
+      "type": "object",
+      "description": "Represents a single item stored within a RAKO box, including its details and a reference to its container and owner.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Item entity, serving as its primary key."
+        },
+        "name": {
+          "type": "string",
+          "description": "A short, descriptive name or primary identifier for the item."
+        },
+        "description": {
+          "type": "string",
+          "description": "A more detailed description of the item, potentially including AI-powered suggestions."
+        },
+        "photoUrl": {
+          "type": "string",
+          "description": "URL to the photo of the item, typically stored in an external storage service (e.g., Firebase Storage).",
+          "format": "uri"
+        },
+        "rakoBoxId": {
+          "type": "string",
+          "description": "Reference to the RakoBox where this item is physically stored. (Relationship: RakoBox 1:N Item)"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User who owns or created this item. (Relationship: User 1:N Item)"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the item record was first created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating the last time the item record was updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "rakoBoxId",
+        "userId",
+        "createdAt"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Root collection for all authenticated users. Each document represents a user's profile, identified by their unique authentication UID. Access is restricted to the user themselves.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user, matching 'request.auth.uid'."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/rakoBoxes/{rakoBoxId}",
+        "definition": {
+          "entityName": "RakoBox",
+          "schema": {
+            "$ref": "#/backend/entities/RakoBox"
+          },
+          "description": "Subcollection containing all RAKO boxes owned by a specific user. Each RakoBox document includes the 'userId' field, denormalized for authorization independence, linking it to the owner specified in the path.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who owns this RAKO box, matching 'request.auth.uid'."
+            },
+            {
+              "name": "rakoBoxId",
+              "description": "The unique UUID identifier for the RAKO box, typically scanned from its QR code."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/rakoBoxes/{rakoBoxId}/items/{itemId}",
+        "definition": {
+          "entityName": "Item",
+          "schema": {
+            "$ref": "#/backend/entities/Item"
+          },
+          "description": "Subcollection storing individual items within a specific RAKO box owned by a user. Each Item document includes 'userId' and 'rakoBoxId' fields, denormalized for authorization independence and consistent with the parent path segments.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who owns this item, matching 'request.auth.uid'."
+            },
+            {
+              "name": "rakoBoxId",
+              "description": "The unique UUID identifier of the parent RAKO box."
+            },
+            {
+              "name": "itemId",
+              "description": "The unique identifier for the item."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The recommended Firestore structure for the RAKO Scout application adheres strictly to the core design principles and mandates, prioritizing Authorization Independence and secure QAPs (Query As Protection). The structure is fully hierarchical, leveraging path-based ownership for all user-specific data.\n\n**Authorization Independence (CRITICAL):**\nEach entity's access control is made atomic and independent through a combination of hierarchical paths and explicit denormalization. For instance, a `RakoBox` is stored at `/users/{userId}/rakoBoxes/{rakoBoxId}`, and the `RakoBox` document itself includes a `userId` field. Similarly, an `Item` is stored at `/users/{userId}/rakoBoxes/{rakoBoxId}/items/{itemId}` and includes both `userId` and `rakoBoxId` fields. This ensures that any Firebase Security Rule evaluating access to a `RakoBox` or `Item` document can verify ownership by simply comparing `request.auth.uid` with the `{userId}` wildcard in the path, and `resource.data.userId` (which must match the path's `userId`). No `get()` calls to parent documents are necessary, thus avoiding transactional failures, simplifying rule logic, and enhancing debuggability. This also enables atomic creation of parent and child documents (e.g., creating a RakoBox and its first Item in a single batch).\n\n**QAPs (Rules are not Filters):**\nThe structural segregation and path-based ownership directly support secure `list` operations without relying on rules as filters. When a user queries for their RakoBoxes (e.g., `db.collection('users').doc(userId).collection('rakoBoxes')`) or items within a specific box (e.g., `db.collection('users').doc(userId).collection('rakoBoxes').doc(rakoBoxId).collection('items')`), the query path itself inherently scopes the data to the authenticated user. Security rules can then simply verify that `request.auth.uid == userId` (where `userId` is the wildcard from the path). This guarantees that users can only list their own data and prevents any unauthorized access attempts from retrieving data that does not belong to them. It ensures that any data returned by a query has already passed authorization checks, upholding the principle that \"rules are not filters.\"\n\n**Structural Segregation & Access Modeling:**\nAll data associated with a user (their RakoBoxes and Items) is nested under their respective user document (`/users/{userId}`). This creates a homogeneous security posture within each subcollection, where all documents share the same ownership-based access requirements. This approach aligns with the 'Private Data' and 'Hierarchical Paths for User-Owned Data' mandates, making security rules straightforward and highly performant."
+  }
+}
