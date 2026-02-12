@@ -2,8 +2,9 @@
 
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore'
+import { getAuth, connectAuthEmulator } from 'firebase/auth';
+import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
+import { getStorage, connectStorageEmulator } from 'firebase/storage';
 
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
 export function initializeFirebase() {
@@ -33,10 +34,45 @@ export function initializeFirebase() {
 }
 
 export function getSdks(firebaseApp: FirebaseApp) {
+  const auth = getAuth(firebaseApp);
+  const firestore = getFirestore(firebaseApp);
+  const storage = getStorage(firebaseApp);
+
+  // Connect to Firebase Emulators if in local development mode
+  if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true') {
+    const authHost = process.env.NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST || 'localhost:9099';
+    const firestoreHost = process.env.NEXT_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_HOST || 'localhost';
+    const firestorePort = parseInt(process.env.NEXT_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_PORT || '8080', 10);
+    const storageHost = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_EMULATOR_HOST || 'localhost';
+    const storagePort = parseInt(process.env.NEXT_PUBLIC_FIREBASE_STORAGE_EMULATOR_PORT || '9199', 10);
+
+    try {
+      // Auth emulator
+      if (!(auth as any)._canInitEmulator) {
+        connectAuthEmulator(auth, `http://${authHost}`, { disableWarnings: true });
+      }
+
+      // Firestore emulator
+      if (!(firestore as any)._settingsFrozen) {
+        connectFirestoreEmulator(firestore, firestoreHost, firestorePort);
+      }
+
+      // Storage emulator
+      if (!(storage as any)._host) {
+        connectStorageEmulator(storage, storageHost, storagePort);
+      }
+
+      console.log('🔥 Connected to Firebase Emulators');
+    } catch (error) {
+      console.warn('Firebase Emulators already connected or connection failed:', error);
+    }
+  }
+
   return {
     firebaseApp,
-    auth: getAuth(firebaseApp),
-    firestore: getFirestore(firebaseApp)
+    auth,
+    firestore,
+    storage,
   };
 }
 
