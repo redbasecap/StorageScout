@@ -10,3 +10,9 @@ export type Item = {
   userId: string;
   createdAt: Timestamp;
 };
+
+export type Box = {
+  id: string;
+  items: Item[];
+  location?: string;
+};
