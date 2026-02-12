@@ -1,0 +1,21 @@
+{
+  "name": "RAKO Scout",
+  "short_name": "RAKO Scout",
+  "description": "A simple app to track items in RAKO boxes.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#EFF3F7",
+  "theme_color": "#3E5572",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
