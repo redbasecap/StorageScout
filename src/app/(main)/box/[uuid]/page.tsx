@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
-import { useAuth } from '@/hooks/use-auth';
+import { useMemo } from 'react';
+import { collection, query, where, orderBy } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import type { Item } from '@/lib/types';
 import ItemsList from '@/components/items-list';
 import { Button } from '@/components/ui/button';
@@ -12,33 +11,21 @@ import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function BoxPage({ params }: { params: { uuid: string } }) {
-  const { user } = useAuth();
-  const [items, setItems] = useState<Item[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { user } = useUser();
+  const firestore = useFirestore();
   const { uuid } = params;
 
-  useEffect(() => {
-    if (!user) return;
-
-    setLoading(true);
-    const q = query(
-      collection(db, 'items'),
+  const itemsQuery = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return query(
+      collection(firestore, 'items'),
       where('userId', '==', user.uid),
       where('boxId', '==', uuid),
       orderBy('createdAt', 'desc')
     );
+  }, [user, firestore, uuid]);
 
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const itemsData: Item[] = [];
-      querySnapshot.forEach((doc) => {
-        itemsData.push({ id: doc.id, ...doc.data() } as Item);
-      });
-      setItems(itemsData);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [user, uuid]);
+  const { data: items, isLoading: loading } = useCollection<Item>(itemsQuery);
 
   return (
     <div className="container mx-auto p-4 md:p-8">
@@ -68,7 +55,7 @@ export default function BoxPage({ params }: { params: { uuid: string } }) {
             ))}
         </div>
       ) : (
-        <ItemsList items={items} />
+        <ItemsList items={items || []} />
       )}
     </div>
   );

@@ -1,10 +1,9 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
-import { useAuth } from '@/hooks/use-auth';
+import { collection, query, where, orderBy, limit } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import type { Item } from '@/lib/types';
 import ItemsList from '@/components/items-list';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -12,41 +11,26 @@ import { Skeleton } from '@/components/ui/skeleton';
 function SearchResults() {
   const searchParams = useSearchParams();
   const q = searchParams.get('q');
-  const { user } = useAuth();
-  const [items, setItems] = useState<Item[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { user } = useUser();
+  const firestore = useFirestore();
 
-  useEffect(() => {
-    if (!user || !q) {
-      setItems([]);
-      setLoading(false);
-      return;
-    };
-
-    setLoading(true);
+  const itemsQuery = useMemoFirebase(() => {
+    if (!user || !firestore || !q) return null;
+    
     // Simple search: Firestore doesn't support native full-text search.
     // This query finds items where the name starts with the search query.
     // For a real app, a third-party service like Algolia or Typesense is recommended.
-    const itemsQuery = query(
-      collection(db, 'items'),
+    return query(
+      collection(firestore, 'items'),
       where('userId', '==', user.uid),
       where('name', '>=', q),
       where('name', '<=', q + '\uf8ff'),
       orderBy('name'),
       limit(20)
     );
+  }, [user, firestore, q]);
 
-    const unsubscribe = onSnapshot(itemsQuery, (querySnapshot) => {
-      const itemsData: Item[] = [];
-      querySnapshot.forEach((doc) => {
-        itemsData.push({ id: doc.id, ...doc.data() } as Item);
-      });
-      setItems(itemsData);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [user, q]);
+  const { data: items, isLoading: loading } = useCollection<Item>(itemsQuery);
 
   return (
     <div className="container mx-auto p-4 md:p-8">
@@ -68,7 +52,7 @@ function SearchResults() {
             ))}
         </div>
       ) : (
-        <ItemsList items={items} />
+        <ItemsList items={items || []} />
       )}
     </div>
   );

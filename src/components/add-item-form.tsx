@@ -1,7 +1,6 @@
 'use client';
 
-import { useFormState } from 'react-dom';
-import { addItemAction, generateDescriptionAction } from '@/app/actions';
+import { generateDescriptionAction } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,21 +10,40 @@ import { Camera, Sparkles, Loader2 } from 'lucide-react';
 import { useRef, useState, useTransition } from 'react';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
+import { useUser, useFirestore, useFirebaseApp } from '@/firebase';
+import { addDoc, collection, Timestamp } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useRouter } from 'next/navigation';
+import { z } from 'zod';
 
-const initialState = {
-  message: '',
+const itemSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  location: z.string().min(1, 'Location is required'),
+  description: z.string().optional(),
+});
+
+type FormErrors = {
+    name?: string[];
+    location?: string[];
+    photo?: string[];
+    description?: string[];
 };
 
 export default function AddItemForm({ boxId }: { boxId: string }) {
-  const [formState, formAction] = useFormState(addItemAction, initialState);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [description, setDescription] = useState('');
   const [isPending, startTransition] = useTransition();
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [formMessage, setFormMessage] = useState('');
 
   const { toast } = useToast();
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const firebaseApp = useFirebaseApp();
+  const router = useRouter();
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -36,6 +54,7 @@ export default function AddItemForm({ boxId }: { boxId: string }) {
         setImagePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
+      setErrors(prev => ({...prev, photo: undefined}));
     }
   };
 
@@ -70,12 +89,58 @@ export default function AddItemForm({ boxId }: { boxId: string }) {
   
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    startTransition(() => {
-        const formData = new FormData(event.currentTarget);
-        if (imageFile) {
-            formData.set('photo', imageFile);
+    setErrors({});
+    setFormMessage('');
+
+    if (!user || !firestore || !firebaseApp) {
+        setFormMessage('Error: Authentication or Firebase services are not available.');
+        return;
+    }
+
+    if (!imageFile) {
+        setErrors({ photo: ['Photo is required'] });
+        return;
+    }
+
+    const formData = new FormData(event.currentTarget);
+    const validatedFields = itemSchema.safeParse({
+        name: formData.get('name'),
+        location: formData.get('location'),
+        description: formData.get('description'),
+    });
+
+    if (!validatedFields.success) {
+        setErrors(validatedFields.error.flatten().fieldErrors);
+        return;
+    }
+
+    startTransition(async () => {
+        try {
+            const storage = getStorage(firebaseApp);
+            // 1. Upload image to Firebase Storage
+            const storageRef = ref(storage, `items/${user.uid}/${Date.now()}-${imageFile.name}`);
+            const snapshot = await uploadBytes(storageRef, imageFile);
+            const imageUrl = await getDownloadURL(snapshot.ref);
+
+            // 2. Save item data to Firestore
+            await addDoc(collection(firestore, 'items'), {
+                name: validatedFields.data.name,
+                location: validatedFields.data.location,
+                description: validatedFields.data.description || '',
+                boxId,
+                imageUrl,
+                userId: user.uid,
+                createdAt: Timestamp.now(),
+            });
+            
+            // No revalidatePath or redirect in client components. Use router.
+            router.push(`/box/${boxId}`);
+            router.refresh(); // To show the new item.
+
+        } catch (error) {
+            console.error(error);
+            setFormMessage('Error: Could not add item. Please try again.');
         }
-        formAction(formData);
     });
   }
 
@@ -112,13 +177,13 @@ export default function AddItemForm({ boxId }: { boxId: string }) {
               <Camera className="mr-2 h-4 w-4" />
               {imagePreview ? 'Change Photo' : 'Take Photo'}
             </Button>
-            {formState?.errors?.photo && <p className="text-sm font-medium text-destructive">{formState.errors.photo[0]}</p>}
+            {errors?.photo && <p className="text-sm font-medium text-destructive">{errors.photo[0]}</p>}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="name">Item Name</Label>
             <Input id="name" name="name" placeholder="e.g., Winter Jacket" required />
-            {formState?.errors?.name && <p className="text-sm font-medium text-destructive">{formState.errors.name[0]}</p>}
+            {errors?.name && <p className="text-sm font-medium text-destructive">{errors.name[0]}</p>}
           </div>
 
           <div className="space-y-2">
@@ -152,7 +217,7 @@ export default function AddItemForm({ boxId }: { boxId: string }) {
           <div className="space-y-2">
             <Label htmlFor="location">Box Location</Label>
             <Input id="location" name="location" placeholder="e.g., Garage Shelf A" required />
-            {formState?.errors?.location && <p className="text-sm font-medium text-destructive">{formState.errors.location[0]}</p>}
+            {errors?.location && <p className="text-sm font-medium text-destructive">{errors.location[0]}</p>}
           </div>
 
           <input type="hidden" name="boxId" value={boxId} />
@@ -164,8 +229,8 @@ export default function AddItemForm({ boxId }: { boxId: string }) {
           </Button>
         </CardFooter>
       </Card>
-      {formState.message && !formState.errors && (
-        <p className="mt-4 text-sm font-medium text-destructive">{formState.message}</p>
+      {formMessage && (
+        <p className="mt-4 text-sm font-medium text-destructive">{formMessage}</p>
       )}
     </form>
   );

@@ -1,9 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useAuth } from '@/hooks/use-auth';
+import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase/config';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -14,15 +13,17 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Boxes, LogOut, User as UserIcon } from 'lucide-react';
+import { Boxes, LogOut } from 'lucide-react';
 import { SearchBar } from './search-bar';
 
 export default function Header() {
-  const { user } = useAuth();
-  const router = auth;
+  const { user } = useUser();
+  const auth = useAuth();
 
   const handleSignOut = async () => {
-    await signOut(auth);
+    if (auth) {
+        await signOut(auth);
+    }
   };
 
   const getInitials = (name?: string | null) => {
