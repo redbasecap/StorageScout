@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
-import { QrCode, Inbox } from "lucide-react";
+import { QrCode, Inbox, CheckCircle2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,18 +14,31 @@ import type { Item, Box } from '@/lib/types';
 import { collection, query, where, orderBy } from 'firebase/firestore';
 import BoxList from '@/components/box-list';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
+
+type ScanStatus = 'idle' | 'scanning' | 'success' | 'error';
 
 export default function MainPage() {
   const [isScanModalOpen, setIsScanModalOpen] = useState(false);
   const [boxId, setBoxId] = useState('');
   const router = useRouter();
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const [scanStatus, setScanStatus] = useState<ScanStatus>('idle');
+  const [scanError, setScanError] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationFrameId = useRef<number>();
+  const animationFrameId = useRef<number | undefined>(undefined);
 
   const { user } = useUser();
   const firestore = useFirestore();
+
+  // Validate UUID format (loose check for any reasonable string that could be a box ID)
+  const isValidBoxId = useCallback((id: string) => {
+    // Accept UUIDs or any alphanumeric string longer than 3 characters
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const generalPattern = /^[a-zA-Z0-9_-]{3,}$/;
+    return uuidPattern.test(id) || generalPattern.test(id);
+  }, []);
 
   const itemsQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
@@ -76,10 +89,13 @@ export default function MainPage() {
   useEffect(() => {
     if (isScanModalOpen) {
       setHasCameraPermission(null);
+      setScanStatus('idle');
+      setScanError('');
       const getCameraPermission = async () => {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
           setHasCameraPermission(true);
+          setScanStatus('scanning');
 
           if (videoRef.current) {
             videoRef.current.srcObject = stream;
@@ -87,12 +103,16 @@ export default function MainPage() {
         } catch (error) {
           console.error('Error accessing camera:', error);
           setHasCameraPermission(false);
+          setScanStatus('error');
+          setScanError('Camera access denied. Please enable camera permissions.');
         }
       };
 
       getCameraPermission();
     } else {
         stopCameraStream();
+        setScanStatus('idle');
+        setScanError('');
     }
 
     return () => {
@@ -118,8 +138,30 @@ export default function MainPage() {
                 });
 
                 if (code) {
-                    stopCameraStream();
-                    router.push(`/box/${code.data}`);
+                    // Validate the scanned QR code
+                    if (isValidBoxId(code.data)) {
+                        setScanStatus('success');
+                        stopCameraStream();
+                        // Brief delay to show success animation
+                        setTimeout(() => {
+                            router.push(`/box/${code.data}`);
+                        }, 500);
+                    } else {
+                        setScanStatus('error');
+                        setScanError('Invalid QR code format. Please scan a valid box QR code.');
+                        stopCameraStream();
+                        // Reset after showing error
+                        setTimeout(() => {
+                            setScanStatus('scanning');
+                            // Restart camera
+                            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+                                .then(stream => {
+                                    if (videoRef.current) {
+                                        videoRef.current.srcObject = stream;
+                                    }
+                                });
+                        }, 2000);
+                    }
                 } else {
                     animationFrameId.current = requestAnimationFrame(tick);
                 }
@@ -134,17 +176,17 @@ export default function MainPage() {
       }
     };
 
-    if (hasCameraPermission === true && isScanModalOpen) {
+    if (hasCameraPermission === true && isScanModalOpen && scanStatus === 'scanning') {
         animationFrameId.current = requestAnimationFrame(tick);
     }
-    
+
     return () => {
         if(animationFrameId.current) {
             cancelAnimationFrame(animationFrameId.current);
         }
     }
 
-  }, [hasCameraPermission, isScanModalOpen, router, stopCameraStream]);
+  }, [hasCameraPermission, isScanModalOpen, scanStatus, router, stopCameraStream, isValidBoxId]);
 
 
   const handleGoToBox = () => {
@@ -220,21 +262,61 @@ export default function MainPage() {
             <div className="relative w-full aspect-video rounded-md border bg-muted overflow-hidden flex items-center justify-center">
                 <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
                 <canvas ref={canvasRef} className="hidden" />
-                {hasCameraPermission === false && (
-                    <div className="absolute inset-0 flex items-center justify-center p-4 bg-black/50">
-                        <Alert variant="destructive">
-                            <AlertTitle>Camera Access Required</AlertTitle>
-                            <AlertDescription>
-                                Please allow camera access in your browser to use this feature.
-                            </AlertDescription>
+
+                {/* Scanning overlay with corner guides */}
+                {scanStatus === 'scanning' && (
+                    <div className="absolute inset-0 pointer-events-none">
+                        {/* Semi-transparent overlay */}
+                        <div className="absolute inset-0 bg-black/30" />
+
+                        {/* Scanning frame with corner guides */}
+                        <div className="absolute inset-0 flex items-center justify-center p-8">
+                            <div className="relative w-full max-w-[280px] aspect-square">
+                                {/* Corner guides */}
+                                <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-cyan-400 rounded-tl-lg" />
+                                <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-cyan-400 rounded-tr-lg" />
+                                <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-cyan-400 rounded-bl-lg" />
+                                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-cyan-400 rounded-br-lg" />
+
+                                {/* Scanning line animation */}
+                                <div className="absolute inset-x-0 top-1/2 h-0.5 bg-cyan-400 animate-pulse" />
+
+                                {/* Instruction text */}
+                                <div className="absolute -bottom-12 left-0 right-0 text-center">
+                                    <p className="text-white text-sm font-medium drop-shadow-lg">
+                                        Searching for QR code...
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Success state */}
+                {scanStatus === 'success' && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-green-600/90 backdrop-blur-sm">
+                        <CheckCircle2 className="h-16 w-16 text-white mb-4 animate-pulse" />
+                        <p className="text-white text-lg font-semibold">QR Code Detected!</p>
+                        <p className="text-white/80 text-sm">Navigating to box...</p>
+                    </div>
+                )}
+
+                {/* Error state */}
+                {scanStatus === 'error' && scanError && (
+                    <div className="absolute inset-0 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+                        <Alert variant="destructive" className="max-w-sm">
+                            <AlertTitle>Error</AlertTitle>
+                            <AlertDescription>{scanError}</AlertDescription>
                         </Alert>
                     </div>
                 )}
-                 {hasCameraPermission === null && (
+
+                {/* Camera permission request */}
+                {hasCameraPermission === null && scanStatus === 'idle' && (
                     <div className="absolute inset-0 flex items-center justify-center">
                         <p className="text-muted-foreground">Requesting camera...</p>
                     </div>
-                 )}
+                )}
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="box-id" className="text-right">
