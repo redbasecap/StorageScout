@@ -32,6 +32,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_SELF_HOSTED=true
+        - NEXT_PUBLIC_USE_FIREBASE_EMULATOR=true
     container_name: storagescout-app
     ports:
       - "3000:3000"
@@ -88,6 +91,20 @@ services:
       - storagescout-network
     profiles:
       - dev
+
+  # HTTPS Reverse Proxy for camera/PWA support on LAN
+  https-proxy:
+    image: nginx:alpine
+    container_name: storagescout-https
+    ports:
+      - "3443:443"
+    volumes:
+      - ../storagescout-proxy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ../certs:/etc/nginx/certs:ro
+    depends_on:
+      - app
+    networks:
+      - storagescout-network
 
 networks:
   storagescout-network:
