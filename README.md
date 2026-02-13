@@ -11,6 +11,23 @@
 - 🔐 **Secure** - Firebase Auth with Google Sign-In
 - ⚡ **Modern Stack** - Next.js 15, React 19, TypeScript, Tailwind CSS
 
+## 🏠 Deployment Modes
+
+StorageScout supports two deployment modes:
+
+### Self-Hosted Mode (`NEXT_PUBLIC_SELF_HOSTED=true`)
+- **No Google account required** — uses anonymous Firebase Auth
+- Runs entirely in Docker with Firebase Emulators
+- Auto-login: users skip the login page and go straight to the app
+- Set via `docker-compose.yml` (already configured)
+
+### Cloud Mode (default)
+- Google Sign-In via Firebase Auth
+- Firebase Cloud (Firestore, Storage, Auth)
+- Standard deployment to Firebase Hosting or any Node.js host
+
+The mode is controlled by the `NEXT_PUBLIC_SELF_HOSTED` environment variable.
+
 ## 🚀 Quick Start
 
 ### Option 1: Local Development with Docker (Recommended)
@@ -21,7 +38,7 @@ Run everything locally with **one command**—no Firebase account needed:
 make dev-docker
 ```
 
-**That's it!** Open http://localhost:9002 and start building.
+**That's it!** Open http://localhost:9002 and start building. Self-hosted mode is enabled automatically in Docker.
 
 📖 **Full Docker guide:** [docs/local-development.md](docs/local-development.md)
 

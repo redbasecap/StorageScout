@@ -43,6 +43,7 @@ services:
       - NEXT_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_PORT=8080
       - NEXT_PUBLIC_FIREBASE_STORAGE_EMULATOR_HOST=firebase-emulators
       - NEXT_PUBLIC_FIREBASE_STORAGE_EMULATOR_PORT=9199
+      - NEXT_PUBLIC_SELF_HOSTED=true
     depends_on:
       firebase-emulators:
         condition: service_healthy
@@ -74,6 +75,7 @@ services:
       - NEXT_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_PORT=8080
       - NEXT_PUBLIC_FIREBASE_STORAGE_EMULATOR_HOST=firebase-emulators
       - NEXT_PUBLIC_FIREBASE_STORAGE_EMULATOR_PORT=9199
+      - NEXT_PUBLIC_SELF_HOSTED=true
     command: >
       sh -c "
         npm install &&
