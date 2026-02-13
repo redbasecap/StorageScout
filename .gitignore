@@ -57,3 +57,4 @@ public/workbox-*.js.map
 
 # Docker
 .docker/
+firebase-export-*/
