@@ -1,5 +1,11 @@
 # StorageScout 📦
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![Firebase](https://img.shields.io/badge/Firebase-Firestore%20%7C%20Auth%20%7C%20Storage-orange?logo=firebase)](https://firebase.google.com/)
+[![Docker](https://img.shields.io/badge/Docker-Self--Hosted-2496ED?logo=docker)](https://www.docker.com/)
+
 **StorageScout** is a Progressive Web App (PWA) for managing inventory in storage boxes using QR codes. Scan box UUIDs, photograph items, and get AI-powered descriptions—all with full offline support.
 
 ## ✨ Features
@@ -213,7 +219,9 @@ docker run -p 3000:3000 storagescout:latest
 
 ## 🤝 Contributing
 
-See [CLAUDE.md](CLAUDE.md) for development guidelines and architecture decisions.
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+For architecture decisions and development notes, see [CLAUDE.md](CLAUDE.md).
 
 ## 📝 License
 
