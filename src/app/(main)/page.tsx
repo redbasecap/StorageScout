@@ -27,17 +27,25 @@ export default function MainPage() {
   const [scanError, setScanError] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationFrameId = useRef<number | undefined>(undefined);
+  // animationFrameId no longer needed — using setInterval for consistent scan rate
 
   const { user } = useUser();
   const firestore = useFirestore();
 
-  // Validate UUID format (loose check for any reasonable string that could be a box ID)
-  const isValidBoxId = useCallback((id: string) => {
-    // Accept UUIDs or any alphanumeric string longer than 3 characters
-    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  // Extract GUID/UUID from QR code data (handles raw UUIDs, URLs containing UUIDs, or general IDs)
+  const extractBoxId = useCallback((data: string): string | null => {
+    const trimmed = data.trim();
+    const uuidPattern = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+    
+    // Try to extract UUID from anywhere in the string (e.g. URL like https://app.com/box/uuid-here)
+    const uuidMatch = trimmed.match(uuidPattern);
+    if (uuidMatch) return uuidMatch[0];
+    
+    // Accept any alphanumeric ID longer than 3 chars as fallback
     const generalPattern = /^[a-zA-Z0-9_-]{3,}$/;
-    return uuidPattern.test(id) || generalPattern.test(id);
+    if (generalPattern.test(trimmed)) return trimmed;
+    
+    return null;
   }, []);
 
   const itemsQuery = useMemoFirebase(() => {
@@ -76,9 +84,6 @@ export default function MainPage() {
   }, [items]);
 
   const stopCameraStream = useCallback(() => {
-    if (animationFrameId.current) {
-        cancelAnimationFrame(animationFrameId.current);
-    }
     if (videoRef.current && videoRef.current.srcObject) {
         const stream = videoRef.current.srcObject as MediaStream;
         stream.getTracks().forEach(track => track.stop());
@@ -93,7 +98,15 @@ export default function MainPage() {
       setScanError('');
       const getCameraPermission = async () => {
         try {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+          const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { 
+              facingMode: "environment",
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+              // @ts-expect-error - focusMode is supported in modern browsers but not in TS types
+              focusMode: { ideal: "continuous" },
+            } 
+          });
           setHasCameraPermission(true);
           setScanStatus('scanning');
 
@@ -121,15 +134,21 @@ export default function MainPage() {
   }, [isScanModalOpen, stopCameraStream]);
 
   useEffect(() => {
+    let intervalId: ReturnType<typeof setInterval> | undefined;
+    // Downscale target for faster jsQR processing
+    const SCAN_WIDTH = 640;
+
     const tick = () => {
       if (videoRef.current && videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA && canvasRef.current) {
         const video = videoRef.current;
         const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
         if (ctx) {
-            canvas.height = video.videoHeight;
-            canvas.width = video.videoWidth;
+            // Downscale for faster processing — QR codes don't need full resolution
+            const scale = Math.min(1, SCAN_WIDTH / video.videoWidth);
+            canvas.width = Math.round(video.videoWidth * scale);
+            canvas.height = Math.round(video.videoHeight * scale);
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             try {
                 const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -138,55 +157,54 @@ export default function MainPage() {
                 });
 
                 if (code) {
-                    // Validate the scanned QR code
-                    if (isValidBoxId(code.data)) {
+                    const boxId = extractBoxId(code.data);
+                    if (boxId) {
                         setScanStatus('success');
                         stopCameraStream();
+                        if (intervalId) clearInterval(intervalId);
                         // Brief delay to show success animation
                         setTimeout(() => {
-                            router.push(`/box/${code.data}`);
+                            router.push(`/box/${boxId}`);
                         }, 500);
                     } else {
                         setScanStatus('error');
                         setScanError('Invalid QR code format. Please scan a valid box QR code.');
                         stopCameraStream();
+                        if (intervalId) clearInterval(intervalId);
                         // Reset after showing error
                         setTimeout(() => {
                             setScanStatus('scanning');
-                            // Restart camera
-                            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-                                .then(stream => {
-                                    if (videoRef.current) {
-                                        videoRef.current.srcObject = stream;
-                                    }
-                                });
+                            navigator.mediaDevices.getUserMedia({ 
+                              video: { 
+                                facingMode: "environment",
+                                width: { ideal: 1280 },
+                                height: { ideal: 720 },
+                              } 
+                            }).then(stream => {
+                                if (videoRef.current) {
+                                    videoRef.current.srcObject = stream;
+                                }
+                            });
                         }, 2000);
                     }
-                } else {
-                    animationFrameId.current = requestAnimationFrame(tick);
                 }
-            } catch (e) {
-                animationFrameId.current = requestAnimationFrame(tick);
+            } catch {
+                // jsQR processing error — continue scanning
             }
-        } else {
-            animationFrameId.current = requestAnimationFrame(tick);
         }
-      } else {
-        animationFrameId.current = requestAnimationFrame(tick);
       }
     };
 
     if (hasCameraPermission === true && isScanModalOpen && scanStatus === 'scanning') {
-        animationFrameId.current = requestAnimationFrame(tick);
+        // Scan every 80ms (~12fps) — fast enough for responsive scanning, light on CPU
+        intervalId = setInterval(tick, 80);
     }
 
     return () => {
-        if(animationFrameId.current) {
-            cancelAnimationFrame(animationFrameId.current);
-        }
+        if (intervalId) clearInterval(intervalId);
     }
 
-  }, [hasCameraPermission, isScanModalOpen, scanStatus, router, stopCameraStream, isValidBoxId]);
+  }, [hasCameraPermission, isScanModalOpen, scanStatus, router, stopCameraStream, extractBoxId]);
 
 
   const handleGoToBox = () => {

@@ -1,5 +1,11 @@
 # StorageScout 📦
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![Firebase](https://img.shields.io/badge/Firebase-Firestore%20%7C%20Auth%20%7C%20Storage-orange?logo=firebase)](https://firebase.google.com/)
+[![Docker](https://img.shields.io/badge/Docker-Self--Hosted-2496ED?logo=docker)](https://www.docker.com/)
+
 **StorageScout** is a Progressive Web App (PWA) for managing inventory in storage boxes using QR codes. Scan box UUIDs, photograph items, and get AI-powered descriptions—all with full offline support.
 
 ## ✨ Features
@@ -11,6 +17,23 @@
 - 🔐 **Secure** - Firebase Auth with Google Sign-In
 - ⚡ **Modern Stack** - Next.js 15, React 19, TypeScript, Tailwind CSS
 
+## 🏠 Deployment Modes
+
+StorageScout supports two deployment modes:
+
+### Self-Hosted Mode (`NEXT_PUBLIC_SELF_HOSTED=true`)
+- **No Google account required** — uses anonymous Firebase Auth
+- Runs entirely in Docker with Firebase Emulators
+- Auto-login: users skip the login page and go straight to the app
+- Set via `docker-compose.yml` (already configured)
+
+### Cloud Mode (default)
+- Google Sign-In via Firebase Auth
+- Firebase Cloud (Firestore, Storage, Auth)
+- Standard deployment to Firebase Hosting or any Node.js host
+
+The mode is controlled by the `NEXT_PUBLIC_SELF_HOSTED` environment variable.
+
 ## 🚀 Quick Start
 
 ### Option 1: Local Development with Docker (Recommended)
@@ -21,7 +44,7 @@ Run everything locally with **one command**—no Firebase account needed:
 make dev-docker
 ```
 
-**That's it!** Open http://localhost:9002 and start building.
+**That's it!** Open http://localhost:9002 and start building. Self-hosted mode is enabled automatically in Docker.
 
 📖 **Full Docker guide:** [docs/local-development.md](docs/local-development.md)
 
@@ -196,7 +219,9 @@ docker run -p 3000:3000 storagescout:latest
 
 ## 🤝 Contributing
 
-See [CLAUDE.md](CLAUDE.md) for development guidelines and architecture decisions.
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+For architecture decisions and development notes, see [CLAUDE.md](CLAUDE.md).
 
 ## 📝 License
 

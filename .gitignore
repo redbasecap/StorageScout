@@ -40,6 +40,7 @@ next-env.d.ts
 .genkit/*
 .env
 .env.*
+.env.local
 !.env.local.example
 
 # firebase
@@ -57,3 +58,4 @@ public/workbox-*.js.map
 
 # Docker
 .docker/
+firebase-export-*/

@@ -1,17 +1,27 @@
 'use client';
 
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, signInAnonymously } from 'firebase/auth';
 import { useUser, useAuth } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Boxes } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { isSelfHosted } from '@/lib/self-hosted';
 
 export default function LoginPage() {
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
   const router = useRouter();
+
+  // Self-hosted mode: auto-login anonymously
+  useEffect(() => {
+    if (isSelfHosted && !user && !isUserLoading && auth) {
+      signInAnonymously(auth).catch((error) => {
+        console.error('Anonymous sign-in failed:', error);
+      });
+    }
+  }, [user, isUserLoading, auth]);
 
   useEffect(() => {
     if (user) {
