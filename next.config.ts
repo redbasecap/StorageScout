@@ -2,13 +2,20 @@ import type {NextConfig} from 'next';
 import withPWA from 'next-pwa';
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  output: 'standalone', // Enable standalone mode for Docker
+  output: 'standalone',
   typescript: {
     ignoreBuildErrors: true,
   },
   eslint: {
     ignoreDuringBuilds: true,
+  },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb',
+    },
+  },
+  turbopack: {
+    root: __dirname,
   },
   images: {
     remotePatterns: [
@@ -40,9 +47,8 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withPWA({
+const pwaConfig = withPWA({
   dest: 'public',
-  disable: process.env.NODE_ENV === 'development',
   register: true,
   skipWaiting: true,
   runtimeCaching: [
@@ -53,7 +59,7 @@ export default withPWA({
         cacheName: 'firebase-storage-cache',
         expiration: {
           maxEntries: 50,
-          maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
+          maxAgeSeconds: 30 * 24 * 60 * 60,
         },
       },
     },
@@ -64,9 +70,11 @@ export default withPWA({
         cacheName: 'image-cache',
         expiration: {
           maxEntries: 100,
-          maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
+          maxAgeSeconds: 7 * 24 * 60 * 60,
         },
       },
     },
   ],
-})(nextConfig);
+});
+
+export default process.env.NODE_ENV === 'production' ? pwaConfig(nextConfig) : nextConfig;
