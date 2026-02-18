@@ -118,6 +118,20 @@ service cloud.firestore {
       allow read: if isSignedIn() && request.auth.uid == resource.data.userId;
     }
 
+    // -----------------------------------------------------------------------
+    // Flat /items collection (actual data model used by the app)
+    // -----------------------------------------------------------------------
+    // The app stores items in a top-level /items collection with a userId field.
+    // Users can only access their own items.
+    match /items/{itemId} {
+      allow read: if isSignedIn() && request.auth.uid == resource.data.userId;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn()
+                    && resource.data.userId == request.auth.uid
+                    && request.resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
     /**
      * @description A user can create their own profile, and then only they can
      *              read, update, or delete it. Listing all users is forbidden.

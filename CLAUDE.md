@@ -145,7 +145,7 @@ From `docs/blueprint.md`:
 
 1. **Firebase Query Memoization**: Always wrap Firestore queries with `useMemoFirebase()` before passing to `useCollection()` or `useDoc()`. Failure to do so causes infinite re-renders and will throw an error.
 
-2. **Data Model Mismatch**: The `firestore.rules` file describes a nested data structure under `/users/{userId}/rakoBoxes/`, but the actual implementation uses a flat `/items` collection with `userId` field. Security rules may need updating to match the implementation.
+2. **Data Model**: The `firestore.rules` file contains rules for both the legacy nested structure (`/users/{userId}/rakoBoxes/`) and the flat `/items` collection that the app actually uses. The flat `/items` rules enforce user ownership via the `userId` field.
 
 3. **Type Checking Disabled in Build**: `next.config.ts` has `ignoreBuildErrors: true` and `ignoreDuringBuilds: true`. Run `npm run typecheck` manually to catch type errors.
 

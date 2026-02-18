@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { extractBoxId } from '@/lib/qr-utils';
 import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { QrCode, Inbox, CheckCircle2 } from "lucide-react";
@@ -32,21 +33,7 @@ export default function MainPage() {
   const { user } = useUser();
   const firestore = useFirestore();
 
-  // Extract GUID/UUID from QR code data (handles raw UUIDs, URLs containing UUIDs, or general IDs)
-  const extractBoxId = useCallback((data: string): string | null => {
-    const trimmed = data.trim();
-    const uuidPattern = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
-    
-    // Try to extract UUID from anywhere in the string (e.g. URL like https://app.com/box/uuid-here)
-    const uuidMatch = trimmed.match(uuidPattern);
-    if (uuidMatch) return uuidMatch[0];
-    
-    // Accept any alphanumeric ID longer than 3 chars as fallback
-    const generalPattern = /^[a-zA-Z0-9_-]{3,}$/;
-    if (generalPattern.test(trimmed)) return trimmed;
-    
-    return null;
-  }, []);
+  // extractBoxId is now imported from @/lib/qr-utils
 
   const itemsQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
@@ -204,7 +191,7 @@ export default function MainPage() {
         if (intervalId) clearInterval(intervalId);
     }
 
-  }, [hasCameraPermission, isScanModalOpen, scanStatus, router, stopCameraStream, extractBoxId]);
+  }, [hasCameraPermission, isScanModalOpen, scanStatus, router, stopCameraStream]);
 
 
   const handleGoToBox = () => {
