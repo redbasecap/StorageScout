@@ -9,10 +9,12 @@ import { PlusCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 
-export default function BoxPage({ params }: { params: { uuid: string } }) {
+import { use } from 'react';
+
+export default function BoxPage({ params }: { params: Promise<{ uuid: string }> }) {
+  const { uuid } = use(params);
   const { user } = useUser();
   const firestore = useFirestore();
-  const { uuid } = params;
 
   const itemsQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;

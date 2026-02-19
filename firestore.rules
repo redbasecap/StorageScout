@@ -1,128 +1,28 @@
 /**
- * Core Philosophy: This ruleset enforces a strict, hierarchical user-ownership model.
- * All user data, including RAKO boxes and the items within them, is stored in
- * subcollections under that user's unique ID. Access is granted only to the
- * authenticated owner of that data tree.
+ * StorageScout Firestore Security Rules
  *
- * Data Structure:
- * - /users/{userId}: A user's profile document.
- * - /users/{userId}/rakoBoxes/{rakoBoxId}: A user's storage boxes.
- * - /users/{userId}/rakoBoxes/{rakoBoxId}/items/{itemId}: Items within a box.
+ * Data Model:
+ * - /items/{itemId}: Flat collection of all items, scoped by userId field.
  *
- * Key Security Decisions:
- * - Default Deny: All paths are closed by default. Access must be explicitly granted.
- * - User Isolation: Users can only access documents within their own path
- *   (e.g., /users/their-own-id/...).
- * - No User Listing: It is forbidden to list the top-level `/users` collection to
- *   protect user privacy.
- * - Query as Protection (QAP): List operations on subcollections are secure because
- *   the client query path itself scopes the request to a specific user. The rules
- *   then simply verify that the requesting user matches the user in the path.
- *
- * Denormalization for Authorization: To ensure fast and simple authorization,
- * documents contain denormalized ownership fields (e.g., 'userId'). This avoids slow
- * and costly `get()` calls to parent documents. Rules on create/update enforce that
- * this denormalized data is consistent with the document's path.
- *
- * Structural Segregation: The entire data model is segregated by user ID, which
- * creates a clean, secure, and performant structure where all documents in a
- * subcollection share the same ownership-based security rules.
+ * Key Principles:
+ * - Default Deny: All paths closed by default.
+ * - User Isolation: Users can only access their own items (userId field).
+ * - Ownership Immutability: userId cannot be changed after creation.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ------------------------------------------------------------------------
-    // Helper Functions
-    // ------------------------------------------------------------------------
-
-    /**
-     * Checks if the user is authenticated.
-     */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /**
-     * Checks if the currently authenticated user's UID matches the provided userId.
-     * This is the primary function for verifying document ownership.
-     */
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    /**
-     * Checks for ownership on an existing document. Used for update and delete
-     * operations to prevent acting on documents that don't exist.
-     */
-    function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
-    }
-
-    // --- Validation Functions for /users ---
-
-    /**
-     * On create, ensures the user's document data contains their own ID.
-     */
-    function hasValidUserCreateData(userId) {
-      return request.resource.data.id == userId;
-    }
-
-    /**
-     * On update, ensures the user's ID within their document is immutable.
-     */
-    function hasImmutableUserData() {
-      return request.resource.data.id == resource.data.id;
-    }
-
-    // --- Validation Functions for /rakoBoxes ---
-
-    /**
-     * On create, ensures the new RakoBox document is correctly linked to its owner.
-     */
-    function hasValidRakoBoxCreateData(userId) {
-      return request.resource.data.userId == userId;
-    }
-
-    /**
-     * On update, ensures the RakoBox's owner ID is immutable.
-     */
-    function hasImmutableRakoBoxData() {
-      return request.resource.data.userId == resource.data.id;
-    }
-
-    // --- Validation Functions for /items ---
-
-    /**
-     * On create, ensures the new Item is linked to the correct owner and parent box.
-     */
-    function hasValidItemCreateData(userId, rakoBoxId) {
-      return request.resource.data.userId == userId && request.resource.data.rakoBoxId == rakoBoxId;
-    }
-
-    /**
-     * On update, ensures the Item's owner and parent box IDs are immutable.
-     */
-    function hasImmutableItemData() {
-      return request.resource.data.userId == resource.data.id && request.resource.data.rakoBoxId == resource.data.rakoBoxId;
-    }
-
-    // ------------------------------------------------------------------------
-    // Collection Rules
-    // ------------------------------------------------------------------------
-
-    // This rule allows collection group queries on the 'items' collection.
-    // It is required for features like global search and viewing all items at once.
-    // It ensures that a user can only read items that they own.
+    // Collection group queries on 'items' — user can only read own items
     match /{path=**}/items/{itemId} {
       allow read: if isSignedIn() && request.auth.uid == resource.data.userId;
     }
 
-    // -----------------------------------------------------------------------
-    // Flat /items collection (actual data model used by the app)
-    // -----------------------------------------------------------------------
-    // The app stores items in a top-level /items collection with a userId field.
-    // Users can only access their own items.
+    // Flat /items collection (primary data model)
     match /items/{itemId} {
       allow read: if isSignedIn() && request.auth.uid == resource.data.userId;
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
@@ -130,64 +30,6 @@ service cloud.firestore {
                     && resource.data.userId == request.auth.uid
                     && request.resource.data.userId == request.auth.uid;
       allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
-    }
-
-    /**
-     * @description A user can create their own profile, and then only they can
-     *              read, update, or delete it. Listing all users is forbidden.
-     * @path /users/{userId}
-     * @allow (create) An authenticated user creates their own profile document:
-     *        `db.collection('users').doc('user_abc').set({id: 'user_abc', ...})`
-     *        where auth.uid is 'user_abc'.
-     * @deny (list) Any user, authenticated or not, tries to list all users:
-     *       `db.collection('users').get()`
-     * @principle Restricts access to a user's own profile and prevents enumeration.
-     */
-    match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isOwner(userId) && hasValidUserCreateData(userId);
-      allow update: if isExistingOwner(userId) && hasImmutableUserData();
-      allow delete: if isExistingOwner(userId);
-    }
-
-    /**
-     * @description A user can manage the RAKO boxes they own. All operations are
-     *              restricted to the owner specified in the path.
-     * @path /users/{userId}/rakoBoxes/{rakoBoxId}
-     * @allow (list) An authenticated user lists their own RAKO boxes:
-     *        `db.collection('users/user_abc/rakoBoxes').get()` where auth.uid is
-     *        'user_abc'.
-     * @deny (get) A different user tries to read a RAKO box:
-     *       `db.doc('users/user_abc/rakoBoxes/box_123').get()` where auth.uid is
-     *       'user_xyz'.
-     * @principle Enforces strict ownership for all documents in a user's subcollection.
-     */
-    match /users/{userId}/rakoBoxes/{rakoBoxId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId) && hasValidRakoBoxCreateData(userId);
-      allow update: if isExistingOwner(userId) && hasImmutableRakoBoxData();
-      allow delete: if isExistingOwner(userId);
-    }
-
-    /**
-     * @description A user can manage the items within a RAKO box they own. All
-     *              operations are restricted to the owner of the parent collections.
-     * @path /users/{userId}/rakoBoxes/{rakoBoxId}/items/{itemId}
-     * @allow (create) A user adds an item to their own box, ensuring path and data consistency:
-     *        `db.doc('users/user_abc/rakoBoxes/box_123/items/item_456').set({userId: 'user_abc', rakoBoxId: 'box_123', ...})`
-     *        where auth.uid is 'user_abc'.
-     * @deny (update) A user tries to move an item to another user's collection by changing the userId field:
-     *       `db.doc('...').update({userId: 'user_xyz'})`
-     * @principle Validates relational integrity between documents and enforces ownership.
-     */
-    match /users/{userId}/rakoBoxes/{rakoBoxId}/items/{itemId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId) && hasValidItemCreateData(userId, rakoBoxId);
-      allow update: if isExistingOwner(userId) && hasImmutableItemData();
-      allow delete: if isExistingOwner(userId);
     }
   }
 }

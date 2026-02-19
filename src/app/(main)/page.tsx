@@ -244,7 +244,7 @@ export default function MainPage() {
               Your inventory is empty.
             </h1>
             <p className="mt-4 text-lg text-muted-foreground">
-              Start organizing by scanning your first RAKO box.
+              Start organizing by scanning your first storage box.
             </p>
             <div className="mt-8 flex justify-center gap-4">
               <Button size="lg" onClick={() => setIsScanModalOpen(true)}>
@@ -258,7 +258,7 @@ export default function MainPage() {
       <Dialog open={isScanModalOpen} onOpenChange={setIsScanModalOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Scan RAKO Box</DialogTitle>
+            <DialogTitle>Scan Box</DialogTitle>
             <DialogDescription>
               Point your camera at a box's QR code or enter the UUID manually.
             </DialogDescription>

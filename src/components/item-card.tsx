@@ -16,12 +16,13 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import type { Item } from '@/lib/types';
-import { MapPin, Box, Trash2, Loader2 } from 'lucide-react';
+import { MapPin, Box, Trash2, Loader2, Pencil } from 'lucide-react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useFirestore, useFirebaseApp } from '@/firebase';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { getStorage, ref, deleteObject } from 'firebase/storage';
 import { useToast } from '@/hooks/use-toast';
+import EditItemDialog from './edit-item-dialog';
 
 type ItemCardProps = {
   item: Item;
@@ -33,6 +34,7 @@ export default function ItemCard({ item }: ItemCardProps) {
   const firebaseApp = useFirebaseApp();
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
 
   const handleDelete = async () => {
     if (!firestore || !firebaseApp) return;
@@ -70,6 +72,7 @@ export default function ItemCard({ item }: ItemCardProps) {
   };
 
   return (
+    <>
     <Card className="overflow-hidden transition-all hover:shadow-lg group relative">
       <CardHeader className="p-0">
         <div className="aspect-video relative">
@@ -91,6 +94,14 @@ export default function ItemCard({ item }: ItemCardProps) {
               <CardDescription className="mt-1 text-sm truncate">{item.description}</CardDescription>
             )}
           </div>
+          <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary shrink-0"
+                onClick={() => setIsEditOpen(true)}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button
@@ -134,5 +145,7 @@ export default function ItemCard({ item }: ItemCardProps) {
         </div>
       </CardContent>
     </Card>
+      <EditItemDialog item={item} open={isEditOpen} onOpenChange={setIsEditOpen} />
+    </>
   );
 }

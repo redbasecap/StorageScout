@@ -145,7 +145,7 @@ From `docs/blueprint.md`:
 
 1. **Firebase Query Memoization**: Always wrap Firestore queries with `useMemoFirebase()` before passing to `useCollection()` or `useDoc()`. Failure to do so causes infinite re-renders and will throw an error.
 
-2. **Data Model**: The `firestore.rules` file contains rules for both the legacy nested structure (`/users/{userId}/rakoBoxes/`) and the flat `/items` collection that the app actually uses. The flat `/items` rules enforce user ownership via the `userId` field.
+2. **Data Model**: The `firestore.rules` file contains rules for the flat `/items` collection that the app uses. Legacy nested rules (`/users/{userId}/rakoBoxes/`) have been removed. User ownership is enforced via the `userId` field.
 
 3. **Type Checking Disabled in Build**: `next.config.ts` has `ignoreBuildErrors: true` and `ignoreDuringBuilds: true`. Run `npm run typecheck` manually to catch type errors.
 
@@ -165,6 +165,11 @@ From `docs/blueprint.md`:
 3. Photo sent to AI via `generateDescriptionAction()`
 4. User reviews/edits AI suggestions
 5. Item saved to Firestore with photo uploaded to Storage
+
+### Editing an Item
+- Hover over an item card to reveal the edit (pencil) icon
+- Opens `EditItemDialog` for inline editing of name, description, and location
+- Updates Firestore document directly via `updateDoc()`
 
 ### Box Display Logic
 Items are fetched and grouped by `boxId` in memory. The grouping preserves the order of items (most recent first) to determine box display order.
