@@ -1,11 +1,14 @@
 'use client';
 
+import { useState } from 'react';
 import { collection, query, where, orderBy } from 'firebase/firestore';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import type { Item } from '@/lib/types';
 import ItemsList from '@/components/items-list';
+import RenameBoxDialog from '@/components/rename-box-dialog';
+import { useBoxLabels } from '@/hooks/use-box-labels';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -15,6 +18,10 @@ export default function BoxPage({ params }: { params: Promise<{ uuid: string }> 
   const { uuid } = use(params);
   const { user } = useUser();
   const firestore = useFirestore();
+  const { getLabel, setLabel } = useBoxLabels();
+  const [isRenameOpen, setIsRenameOpen] = useState(false);
+
+  const boxLabel = getLabel(uuid);
 
   const itemsQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
@@ -32,8 +39,23 @@ export default function BoxPage({ params }: { params: Promise<{ uuid: string }> 
     <div className="container mx-auto p-4 md:p-8">
       <div className="flex items-center justify-between mb-8">
         <div>
-            <h1 className="text-3xl font-bold tracking-tight">Box Contents</h1>
-            <p className="text-muted-foreground truncate max-w-sm md:max-w-md">UUID: {uuid}</p>
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl font-bold tracking-tight">
+                {boxLabel || 'Box Contents'}
+              </h1>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-primary"
+                onClick={() => setIsRenameOpen(true)}
+                title="Rename box"
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            </div>
+            <p className="text-muted-foreground truncate max-w-sm md:max-w-md font-mono text-sm">
+              {uuid}
+            </p>
         </div>
         <Link href={`/box/${uuid}/add`}>
           <Button>
@@ -58,6 +80,14 @@ export default function BoxPage({ params }: { params: Promise<{ uuid: string }> 
       ) : (
         <ItemsList items={items || []} />
       )}
+
+      <RenameBoxDialog
+        boxId={uuid}
+        currentLabel={boxLabel}
+        open={isRenameOpen}
+        onOpenChange={setIsRenameOpen}
+        onSave={setLabel}
+      />
     </div>
   );
 }

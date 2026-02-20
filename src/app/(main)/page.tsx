@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { extractBoxId } from '@/lib/qr-utils';
 import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
-import { QrCode, Inbox, CheckCircle2 } from "lucide-react";
+import { QrCode, Inbox, CheckCircle2, Download } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +14,9 @@ import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebas
 import type { Item, Box } from '@/lib/types';
 import { collection, query, where, orderBy } from 'firebase/firestore';
 import BoxList from '@/components/box-list';
+import InventoryStats from '@/components/inventory-stats';
+import { useBoxLabels } from '@/hooks/use-box-labels';
+import { itemsToCsv, downloadCsv } from '@/lib/export';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
@@ -45,6 +48,7 @@ export default function MainPage() {
   }, [user, firestore]);
 
   const { data: items, isLoading: isLoadingItems } = useCollection<Item>(itemsQuery);
+  const { labels: boxLabels } = useBoxLabels();
 
   const boxes = useMemo(() => {
       if (!items) return [];
@@ -228,12 +232,27 @@ export default function MainPage() {
             <div>
                 <div className="flex items-center justify-between mb-8">
                     <h1 className="text-3xl font-bold tracking-tight">Your Boxes</h1>
-                    <Button onClick={() => setIsScanModalOpen(true)}>
-                        <QrCode className="mr-2 h-5 w-5" />
-                        Scan a Box
-                    </Button>
+                    <div className="flex gap-2">
+                      {items && items.length > 0 && (
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            const csv = itemsToCsv(items);
+                            downloadCsv(csv, `storagescout-export-${new Date().toISOString().slice(0, 10)}.csv`);
+                          }}
+                        >
+                          <Download className="mr-2 h-5 w-5" />
+                          Export
+                        </Button>
+                      )}
+                      <Button onClick={() => setIsScanModalOpen(true)}>
+                          <QrCode className="mr-2 h-5 w-5" />
+                          Scan a Box
+                      </Button>
+                    </div>
                 </div>
-                <BoxList boxes={boxes} />
+                <InventoryStats boxes={boxes} />
+                <BoxList boxes={boxes} labelMap={boxLabels} />
             </div>
         ) : (
         <div className="text-center py-16">

@@ -8,9 +8,10 @@ import { Box as BoxIcon, MapPin, Package } from 'lucide-react';
 
 type BoxCardProps = {
   box: Box;
+  label?: string;
 };
 
-export default function BoxCard({ box }: BoxCardProps) {
+export default function BoxCard({ box, label }: BoxCardProps) {
   const itemCount = box.items.length;
   const firstItemWithImage = box.items.find(item => item.imageUrl);
   const displayImage = firstItemWithImage ? firstItemWithImage.imageUrl : null;
@@ -37,9 +38,11 @@ export default function BoxCard({ box }: BoxCardProps) {
             </CardHeader>
             <CardContent className="p-4 flex-grow flex flex-col">
                 <div className="flex-grow">
-                    <CardTitle className="text-lg font-semibold leading-tight truncate">Box</CardTitle>
-                    <CardDescription className="mt-1 text-sm truncate" title={box.id}>
-                        {box.id}
+                    <CardTitle className="text-lg font-semibold leading-tight truncate">
+                        {label || 'Box'}
+                    </CardTitle>
+                    <CardDescription className="mt-1 text-sm truncate font-mono" title={box.id}>
+                        {box.id.substring(0, 8)}...
                     </CardDescription>
                 </div>
                 <div className="mt-4 flex flex-col space-y-2 text-sm text-muted-foreground">

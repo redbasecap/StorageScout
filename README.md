@@ -14,6 +14,10 @@
 - 📸 **AI-Powered Item Recognition** - Gemini 2.5 Flash describes items from photos
 - 📱 **Progressive Web App** - Install on iPhone/Android, works offline
 - 🔄 **Offline-First** - Browse and add items without internet
+- 🏷️ **Box Labels** - Give your boxes friendly names instead of raw UUIDs
+- 📊 **Dashboard Stats** - See totals for boxes, items, and locations at a glance
+- 🔀 **Move Items** - Reorganize by moving items between boxes
+- 📥 **CSV Export** - Export your full inventory for backup or sharing
 - 🔐 **Secure** - Firebase Auth with Google Sign-In
 - ⚡ **Modern Stack** - Next.js 15, React 19, TypeScript, Tailwind CSS
 
@@ -215,7 +219,16 @@ docker run -p 3000:3000 storagescout:latest
 }
 ```
 
-**Boxes** are virtual groupings derived from `boxId` field.
+### Box Labels Collection (`/boxLabels/{boxId}`)
+
+```typescript
+{
+  name: string           // Friendly label
+  userId: string         // Owner ID
+}
+```
+
+**Boxes** are virtual groupings derived from `boxId` field. Labels are optional user-defined names.
 
 ## 🤝 Contributing
 

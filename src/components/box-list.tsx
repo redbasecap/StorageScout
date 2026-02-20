@@ -6,9 +6,10 @@ import { Inbox } from 'lucide-react';
 
 type BoxListProps = {
   boxes: Box[];
+  labelMap?: Map<string, string>;
 };
 
-export default function BoxList({ boxes }: BoxListProps) {
+export default function BoxList({ boxes, labelMap }: BoxListProps) {
   if (boxes.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/20 p-12 text-center">
@@ -24,7 +25,7 @@ export default function BoxList({ boxes }: BoxListProps) {
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {boxes.map((box) => (
-        <BoxCard key={box.id} box={box} />
+        <BoxCard key={box.id} box={box} label={labelMap?.get(box.id)} />
       ))}
     </div>
   );

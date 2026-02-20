@@ -22,6 +22,16 @@ service cloud.firestore {
       allow read: if isSignedIn() && request.auth.uid == resource.data.userId;
     }
 
+    // Box labels — user-defined friendly names for boxes
+    match /boxLabels/{boxId} {
+      allow read: if isSignedIn() && request.auth.uid == resource.data.userId;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn()
+                    && resource.data.userId == request.auth.uid
+                    && request.resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
     // Flat /items collection (primary data model)
     match /items/{itemId} {
       allow read: if isSignedIn() && request.auth.uid == resource.data.userId;

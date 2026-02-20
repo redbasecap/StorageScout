@@ -16,13 +16,14 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import type { Item } from '@/lib/types';
-import { MapPin, Box, Trash2, Loader2, Pencil } from 'lucide-react';
+import { MapPin, Box, Trash2, Loader2, Pencil, ArrowRightLeft } from 'lucide-react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useFirestore, useFirebaseApp } from '@/firebase';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { getStorage, ref, deleteObject } from 'firebase/storage';
 import { useToast } from '@/hooks/use-toast';
 import EditItemDialog from './edit-item-dialog';
+import MoveItemDialog from './move-item-dialog';
 
 type ItemCardProps = {
   item: Item;
@@ -35,6 +36,7 @@ export default function ItemCard({ item }: ItemCardProps) {
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isMoveOpen, setIsMoveOpen] = useState(false);
 
   const handleDelete = async () => {
     if (!firestore || !firebaseApp) return;
@@ -99,8 +101,18 @@ export default function ItemCard({ item }: ItemCardProps) {
                 size="icon"
                 className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary shrink-0"
                 onClick={() => setIsEditOpen(true)}
+                title="Edit item"
               >
                 <Pencil className="h-4 w-4" />
+              </Button>
+          <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary shrink-0"
+                onClick={() => setIsMoveOpen(true)}
+                title="Move to another box"
+              >
+                <ArrowRightLeft className="h-4 w-4" />
               </Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>
@@ -146,6 +158,7 @@ export default function ItemCard({ item }: ItemCardProps) {
       </CardContent>
     </Card>
       <EditItemDialog item={item} open={isEditOpen} onOpenChange={setIsEditOpen} />
+      <MoveItemDialog item={item} open={isMoveOpen} onOpenChange={setIsMoveOpen} />
     </>
   );
 }
