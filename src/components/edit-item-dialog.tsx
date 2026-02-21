@@ -29,6 +29,7 @@ export default function EditItemDialog({ item, open, onOpenChange }: EditItemDia
   const [name, setName] = useState(item.name);
   const [description, setDescription] = useState(item.description || '');
   const [location, setLocation] = useState(item.location || '');
+  const [tagsInput, setTagsInput] = useState((item.tags ?? []).join(', '));
   const [isSaving, setIsSaving] = useState(false);
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -38,10 +39,15 @@ export default function EditItemDialog({ item, open, onOpenChange }: EditItemDia
 
     setIsSaving(true);
     try {
+      const tags = tagsInput
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean);
       await updateDoc(doc(firestore, 'items', item.id), {
         name: name.trim(),
         description: description.trim(),
         location: location.trim(),
+        tags,
       });
 
       toast({
@@ -95,6 +101,16 @@ export default function EditItemDialog({ item, open, onOpenChange }: EditItemDia
               onChange={(e) => setLocation(e.target.value)}
               placeholder="Box location"
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="edit-tags">Tags</Label>
+            <Input
+              id="edit-tags"
+              value={tagsInput}
+              onChange={(e) => setTagsInput(e.target.value)}
+              placeholder="e.g. electronics, fragile, winter"
+            />
+            <p className="text-xs text-muted-foreground">Comma-separated tags</p>
           </div>
         </div>
         <DialogFooter>

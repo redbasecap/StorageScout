@@ -9,6 +9,7 @@ export type Item = {
   imageUrl: string;
   userId: string;
   createdAt: Timestamp;
+  tags?: string[];
 };
 
 export type Box = {

@@ -122,6 +122,10 @@ export default function AddItemForm({ boxId }: { boxId: string }) {
             const snapshot = await uploadBytes(storageRef, imageFile);
             const imageUrl = await getDownloadURL(snapshot.ref);
 
+            // Parse tags
+            const tagsRaw = (formData.get('tags') as string) || '';
+            const tags = tagsRaw.split(',').map(t => t.trim()).filter(Boolean);
+
             // 2. Save item data to Firestore
             await addDoc(collection(firestore, 'items'), {
                 name: validatedFields.data.name,
@@ -131,6 +135,7 @@ export default function AddItemForm({ boxId }: { boxId: string }) {
                 imageUrl,
                 userId: user.uid,
                 createdAt: Timestamp.now(),
+                tags,
             });
             
             // No revalidatePath or redirect in client components. Use router.
@@ -218,6 +223,12 @@ export default function AddItemForm({ boxId }: { boxId: string }) {
             <Label htmlFor="location">Box Location</Label>
             <Input id="location" name="location" placeholder="e.g., Garage Shelf A" required />
             {errors?.location && <p className="text-sm font-medium text-destructive">{errors.location[0]}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="tags">Tags (optional)</Label>
+            <Input id="tags" name="tags" placeholder="e.g., electronics, fragile, winter" />
+            <p className="text-xs text-muted-foreground">Comma-separated tags for easier filtering</p>
           </div>
 
           <input type="hidden" name="boxId" value={boxId} />

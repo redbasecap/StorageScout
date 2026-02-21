@@ -4,12 +4,13 @@ import type { Item } from './types';
  * Export items to CSV format.
  */
 export function itemsToCsv(items: Item[]): string {
-  const headers = ['Name', 'Description', 'Box ID', 'Location', 'Created At'];
+  const headers = ['Name', 'Description', 'Box ID', 'Location', 'Tags', 'Created At'];
   const rows = items.map((item) => [
     escapeCsvField(item.name),
     escapeCsvField(item.description),
     escapeCsvField(item.boxId),
     escapeCsvField(item.location),
+    escapeCsvField((item.tags ?? []).join('; ')),
     item.createdAt?.toDate?.()
       ? item.createdAt.toDate().toISOString()
       : '',

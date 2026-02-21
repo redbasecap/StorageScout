@@ -20,7 +20,7 @@ function makeItem(overrides: Partial<Item> = {}): Item {
 describe('itemsToCsv', () => {
   it('produces correct headers', () => {
     const csv = itemsToCsv([]);
-    expect(csv).toBe('Name,Description,Box ID,Location,Created At');
+    expect(csv).toBe('Name,Description,Box ID,Location,Tags,Created At');
   });
 
   it('exports a single item', () => {
@@ -48,7 +48,7 @@ describe('itemsToCsv', () => {
     const csv = itemsToCsv([makeItem({ description: '' })]);
     const lines = csv.split('\n');
     // Should not crash and should have correct number of commas
-    expect(lines[1].split(',').length).toBeGreaterThanOrEqual(5);
+    expect(lines[1].split(',').length).toBeGreaterThanOrEqual(6);
   });
 
   it('exports multiple items', () => {

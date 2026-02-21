@@ -18,6 +18,10 @@
 - 📊 **Dashboard Stats** - See totals for boxes, items, and locations at a glance
 - 🔀 **Move Items** - Reorganize by moving items between boxes
 - 📥 **CSV Export** - Export your full inventory for backup or sharing
+- 🏷️ **Tags** - Categorize items with custom tags for easy filtering
+- 🔍 **Sort & Filter** - Sort by name, date, or location; filter items inline
+- 🖼️ **Image Lightbox** - Click photos to view full-size with keyboard navigation
+- ✅ **Batch Operations** - Select multiple items for bulk delete
 - 🔐 **Secure** - Firebase Auth with Google Sign-In
 - ⚡ **Modern Stack** - Next.js 15, React 19, TypeScript, Tailwind CSS
 
@@ -216,6 +220,7 @@ docker run -p 3000:3000 storagescout:latest
   imageUrl: string       // Firebase Storage URL
   userId: string         // Owner ID
   createdAt: Timestamp
+  tags?: string[]        // User-defined categories
 }
 ```
 
