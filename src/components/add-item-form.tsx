@@ -1,6 +1,6 @@
 'use client';
 
-import { generateDescriptionAction } from '@/app/actions';
+import { generateDescriptionClient } from '@/lib/ai-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -69,7 +69,7 @@ export default function AddItemForm({ boxId }: { boxId: string }) {
     }
     setIsAiLoading(true);
     try {
-      const result = await generateDescriptionAction(imagePreview);
+      const result = await generateDescriptionClient(imagePreview);
       if (result.success) {
         setDescription(result.itemDescription || '');
         if (result.itemName) {
@@ -139,8 +139,7 @@ export default function AddItemForm({ boxId }: { boxId: string }) {
             });
             
             // No revalidatePath or redirect in client components. Use router.
-            router.push(`/box/${boxId}`);
-            router.refresh(); // To show the new item.
+            router.push(`/box?id=${boxId}`);
 
         } catch (error) {
             console.error(error);

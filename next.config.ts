@@ -1,8 +1,10 @@
 import type {NextConfig} from 'next';
 import withPWA from 'next-pwa';
 
+const isStaticExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
+
 const nextConfig: NextConfig = {
-  output: 'standalone',
+  output: isStaticExport ? 'export' : 'standalone',
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -18,6 +20,7 @@ const nextConfig: NextConfig = {
     root: __dirname,
   },
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',

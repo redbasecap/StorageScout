@@ -15,6 +15,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Boxes, LogOut } from 'lucide-react';
 import { SearchBar } from './search-bar';
+import { ThemeToggle } from './theme-toggle';
 
 export default function Header() {
   const { user } = useUser();
@@ -46,7 +47,8 @@ export default function Header() {
           <div className="w-full flex-1 md:w-auto md:flex-none">
             <SearchBar />
           </div>
-          <nav className="flex items-center">
+          <nav className="flex items-center gap-1">
+            <ThemeToggle />
             {user && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

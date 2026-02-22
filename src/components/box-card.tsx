@@ -17,7 +17,7 @@ export default function BoxCard({ box, label }: BoxCardProps) {
   const displayImage = firstItemWithImage ? firstItemWithImage.imageUrl : null;
   
   return (
-    <Link href={`/box/${box.id}`} className="block h-full">
+    <Link href={`/box?id=${box.id}`} className="block h-full">
         <Card className="overflow-hidden transition-all hover:shadow-lg h-full flex flex-col group">
             <CardHeader className="p-0">
                 <div className="aspect-video relative bg-muted">

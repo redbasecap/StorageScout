@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { collection, query, where, orderBy } from 'firebase/firestore';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import type { Item } from '@/lib/types';
@@ -12,10 +13,9 @@ import { PlusCircle, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 
-import { use } from 'react';
-
-export default function BoxPage({ params }: { params: Promise<{ uuid: string }> }) {
-  const { uuid } = use(params);
+function BoxPageContent() {
+  const searchParams = useSearchParams();
+  const uuid = searchParams.get('id') || '';
   const { user } = useUser();
   const firestore = useFirestore();
   const { getLabel, setLabel } = useBoxLabels();
@@ -24,7 +24,7 @@ export default function BoxPage({ params }: { params: Promise<{ uuid: string }> 
   const boxLabel = getLabel(uuid);
 
   const itemsQuery = useMemoFirebase(() => {
-    if (!user || !firestore) return null;
+    if (!user || !firestore || !uuid) return null;
     return query(
       collection(firestore, 'items'),
       where('userId', '==', user.uid),
@@ -34,6 +34,10 @@ export default function BoxPage({ params }: { params: Promise<{ uuid: string }> 
   }, [user, firestore, uuid]);
 
   const { data: items, isLoading: loading } = useCollection<Item>(itemsQuery);
+
+  if (!uuid) {
+    return <div className="container mx-auto p-4">No box ID provided.</div>;
+  }
 
   return (
     <div className="container mx-auto p-4 md:p-8">
@@ -57,7 +61,7 @@ export default function BoxPage({ params }: { params: Promise<{ uuid: string }> 
               {uuid}
             </p>
         </div>
-        <Link href={`/box/${uuid}/add`}>
+        <Link href={`/box/add?id=${uuid}`}>
           <Button>
             <PlusCircle className="mr-2 h-5 w-5" />
             Add Item
@@ -67,15 +71,15 @@ export default function BoxPage({ params }: { params: Promise<{ uuid: string }> 
 
       {loading ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {[...Array(4)].map((_, i) => (
-                <div key={i} className="flex flex-col space-y-3">
-                    <Skeleton className="h-[225px] w-full rounded-xl" />
-                    <div className="space-y-2">
-                        <Skeleton className="h-4 w-3/4" />
-                        <Skeleton className="h-4 w-1/2" />
-                    </div>
-                </div>
-            ))}
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="flex flex-col space-y-3">
+              <Skeleton className="h-[225px] w-full rounded-xl" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : (
         <ItemsList items={items || []} />
@@ -89,5 +93,13 @@ export default function BoxPage({ params }: { params: Promise<{ uuid: string }> 
         onSave={setLabel}
       />
     </div>
+  );
+}
+
+export default function BoxPage() {
+  return (
+    <Suspense fallback={<div className="container mx-auto p-4">Loading...</div>}>
+      <BoxPageContent />
+    </Suspense>
   );
 }

@@ -19,7 +19,6 @@ import { useBoxLabels } from '@/hooks/use-box-labels';
 import { itemsToCsv, downloadCsv } from '@/lib/export';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-
 type ScanStatus = 'idle' | 'scanning' | 'success' | 'error';
 
 export default function MainPage() {
@@ -155,7 +154,7 @@ export default function MainPage() {
                         if (intervalId) clearInterval(intervalId);
                         // Brief delay to show success animation
                         setTimeout(() => {
-                            router.push(`/box/${boxId}`);
+                            router.push(`/box?id=${boxId}`);
                         }, 500);
                     } else {
                         setScanStatus('error');
@@ -200,7 +199,7 @@ export default function MainPage() {
 
   const handleGoToBox = () => {
     if (boxId) {
-      router.push(`/box/${boxId}`);
+      router.push(`/box?id=${boxId}`);
     }
   };
 
@@ -230,6 +229,41 @@ export default function MainPage() {
     <div className="container mx-auto p-4 md:p-8">
       {boxes.length > 0 ? (
             <div>
+                {/* Statistics Dashboard */}
+                <div className="grid gap-4 md:grid-cols-3 mb-8">
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Total Boxes</CardTitle>
+                      <BoxesIcon className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{boxes.length}</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Total Items</CardTitle>
+                      <Package className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{items?.length || 0}</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Recent Activity</CardTitle>
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">
+                        {items?.[0]?.createdAt?.toDate?.()
+                          ? new Intl.DateTimeFormat('en', { dateStyle: 'medium' }).format(items[0].createdAt.toDate())
+                          : 'No activity'}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
                 <div className="flex items-center justify-between mb-8">
                     <h1 className="text-3xl font-bold tracking-tight">Your Boxes</h1>
                     <div className="flex gap-2">
