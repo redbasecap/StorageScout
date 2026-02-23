@@ -9,7 +9,8 @@ import ItemsList from '@/components/items-list';
 import RenameBoxDialog from '@/components/rename-box-dialog';
 import { useBoxLabels } from '@/hooks/use-box-labels';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Pencil } from 'lucide-react';
+import { PlusCircle, Pencil, QrCode } from 'lucide-react';
+import QrCodeDialog from '@/components/qr-code-dialog';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -20,6 +21,7 @@ function BoxPageContent() {
   const firestore = useFirestore();
   const { getLabel, setLabel } = useBoxLabels();
   const [isRenameOpen, setIsRenameOpen] = useState(false);
+  const [isQrOpen, setIsQrOpen] = useState(false);
 
   const boxLabel = getLabel(uuid);
 
@@ -56,6 +58,15 @@ function BoxPageContent() {
               >
                 <Pencil className="h-4 w-4" />
               </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-primary"
+                onClick={() => setIsQrOpen(true)}
+                title="Show QR code"
+              >
+                <QrCode className="h-4 w-4" />
+              </Button>
             </div>
             <p className="text-muted-foreground truncate max-w-sm md:max-w-md font-mono text-sm">
               {uuid}
@@ -91,6 +102,12 @@ function BoxPageContent() {
         open={isRenameOpen}
         onOpenChange={setIsRenameOpen}
         onSave={setLabel}
+      />
+      <QrCodeDialog
+        boxId={uuid}
+        boxLabel={boxLabel}
+        open={isQrOpen}
+        onOpenChange={setIsQrOpen}
       />
     </div>
   );

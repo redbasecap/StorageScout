@@ -36,7 +36,8 @@ function SearchResults() {
         item.name.toLowerCase().includes(lower) ||
         item.description?.toLowerCase().includes(lower) ||
         item.location?.toLowerCase().includes(lower) ||
-        item.boxId.toLowerCase().includes(lower)
+        item.boxId.toLowerCase().includes(lower) ||
+        item.tags?.some((tag) => tag.toLowerCase().includes(lower))
     );
   }, [allItems, q]);
 
