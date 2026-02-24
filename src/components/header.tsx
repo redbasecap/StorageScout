@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Boxes, LogOut } from 'lucide-react';
+import { Boxes, LogOut, MapPin } from 'lucide-react';
 import { SearchBar } from './search-bar';
 import { ThemeToggle } from './theme-toggle';
 
@@ -48,6 +48,11 @@ export default function Header() {
             <SearchBar />
           </div>
           <nav className="flex items-center gap-1">
+            <Link href="/locations">
+              <Button variant="ghost" size="icon" title="Locations">
+                <MapPin className="h-5 w-5" />
+              </Button>
+            </Link>
             <ThemeToggle />
             {user && (
               <DropdownMenu>

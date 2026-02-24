@@ -20,6 +20,7 @@ import { useBoxLabels } from '@/hooks/use-box-labels';
 import { itemsToCsv, downloadCsv } from '@/lib/export';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import RecentItems from '@/components/recent-items';
 type ScanStatus = 'idle' | 'scanning' | 'success' | 'error';
 
 export default function MainPage() {
@@ -286,6 +287,7 @@ export default function MainPage() {
                       </Button>
                     </div>
                 </div>
+                {items && items.length > 0 && <RecentItems items={items} />}
                 <InventoryStats boxes={boxes} />
                 <BoxList boxes={boxes} labelMap={boxLabels} />
             </div>
