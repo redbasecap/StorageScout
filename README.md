@@ -17,7 +17,9 @@
 - 🏷️ **Box Labels** - Give your boxes friendly names instead of raw UUIDs
 - 📊 **Dashboard Stats** - See totals for boxes, items, and locations at a glance
 - 🔀 **Move Items** - Reorganize by moving items between boxes
-- 📥 **CSV Export** - Export your full inventory for backup or sharing
+- 📥 **CSV Export & Import** - Export your inventory to CSV or import from CSV files
+- 🖨️ **Print QR Labels** - Generate printable sheets of QR code labels for your boxes
+- ⚙️ **Settings Page** - Account info, inventory summary, data management tools
 - 🏷️ **Tags** - Categorize items with custom tags for easy filtering
 - 🔍 **Sort & Filter** - Sort by name, date, or location; filter items inline
 - 🖼️ **Image Lightbox** - Click photos to view full-size with keyboard navigation

@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { extractBoxId } from '@/lib/qr-utils';
 import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
-import { QrCode, Inbox, CheckCircle2, Download, Package, Clock, Box as BoxesIcon } from "lucide-react";
+import { QrCode, Inbox, CheckCircle2, Download, Upload, Printer, Package, Clock, Box as BoxesIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,10 +21,14 @@ import { itemsToCsv, downloadCsv } from '@/lib/export';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import RecentItems from '@/components/recent-items';
+import ImportCsvDialog from '@/components/import-csv-dialog';
+import PrintLabelsDialog from '@/components/print-labels-dialog';
 type ScanStatus = 'idle' | 'scanning' | 'success' | 'error';
 
 export default function MainPage() {
   const [isScanModalOpen, setIsScanModalOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isPrintOpen, setIsPrintOpen] = useState(false);
   const [boxId, setBoxId] = useState('');
   const router = useRouter();
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
@@ -270,16 +274,26 @@ export default function MainPage() {
                     <h1 className="text-3xl font-bold tracking-tight">Your Boxes</h1>
                     <div className="flex gap-2">
                       {items && items.length > 0 && (
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            const csv = itemsToCsv(items);
-                            downloadCsv(csv, `storagescout-export-${new Date().toISOString().slice(0, 10)}.csv`);
-                          }}
-                        >
-                          <Download className="mr-2 h-5 w-5" />
-                          Export
-                        </Button>
+                        <>
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              const csv = itemsToCsv(items);
+                              downloadCsv(csv, `storagescout-export-${new Date().toISOString().slice(0, 10)}.csv`);
+                            }}
+                          >
+                            <Download className="mr-2 h-5 w-5" />
+                            Export
+                          </Button>
+                          <Button variant="outline" onClick={() => setIsImportOpen(true)}>
+                            <Upload className="mr-2 h-5 w-5" />
+                            Import
+                          </Button>
+                          <Button variant="outline" onClick={() => setIsPrintOpen(true)}>
+                            <Printer className="mr-2 h-5 w-5" />
+                            Labels
+                          </Button>
+                        </>
                       )}
                       <Button onClick={() => setIsScanModalOpen(true)}>
                           <QrCode className="mr-2 h-5 w-5" />
@@ -397,6 +411,13 @@ export default function MainPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ImportCsvDialog open={isImportOpen} onOpenChange={setIsImportOpen} />
+      <PrintLabelsDialog
+        open={isPrintOpen}
+        onOpenChange={setIsPrintOpen}
+        boxes={boxes.map((b) => ({ id: b.id, label: boxLabels.get(b.id) }))}
+      />
     </div>
   );
 }

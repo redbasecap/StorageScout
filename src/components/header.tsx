@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Boxes, LogOut, MapPin } from 'lucide-react';
+import { Boxes, LogOut, MapPin, Settings } from 'lucide-react';
 import { SearchBar } from './search-bar';
 import { ThemeToggle } from './theme-toggle';
 
@@ -51,6 +51,11 @@ export default function Header() {
             <Link href="/locations">
               <Button variant="ghost" size="icon" title="Locations">
                 <MapPin className="h-5 w-5" />
+              </Button>
+            </Link>
+            <Link href="/settings">
+              <Button variant="ghost" size="icon" title="Settings">
+                <Settings className="h-5 w-5" />
               </Button>
             </Link>
             <ThemeToggle />

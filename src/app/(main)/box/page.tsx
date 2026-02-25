@@ -13,6 +13,7 @@ import { PlusCircle, Pencil, QrCode } from 'lucide-react';
 import QrCodeDialog from '@/components/qr-code-dialog';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
+import BoxStatsPanel from '@/components/box-stats-panel';
 
 function BoxPageContent() {
   const searchParams = useSearchParams();
@@ -93,7 +94,10 @@ function BoxPageContent() {
           ))}
         </div>
       ) : (
-        <ItemsList items={items || []} />
+        <>
+          {items && items.length > 0 && <BoxStatsPanel items={items} />}
+          <ItemsList items={items || []} />
+        </>
       )}
 
       <RenameBoxDialog
