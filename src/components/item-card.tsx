@@ -26,6 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import EditItemDialog from './edit-item-dialog';
 import MoveItemDialog from './move-item-dialog';
 import { cn } from '@/lib/utils';
+import { truncateUuid } from '@/lib/format';
 
 type ItemCardProps = {
   item: Item;
@@ -205,7 +206,7 @@ export default function ItemCard({ item, selectionMode, selected, onSelect, onIm
             </div>
             <div className="flex items-center">
               <Box className="mr-2 h-4 w-4" />
-              <span className="truncate" title={item.boxId}>Box: {item.boxId.substring(0, 8)}...</span>
+              <span className="truncate" title={item.boxId}>Box: {truncateUuid(item.boxId)}</span>
             </div>
           </div>
         </CardContent>

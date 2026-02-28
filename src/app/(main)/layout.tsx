@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, ReactNode } from 'react';
 import { signInAnonymously } from 'firebase/auth';
 import Header from '@/components/header';
+import { ErrorBoundary } from '@/components/error-boundary';
 import { isSelfHosted } from '@/lib/self-hosted';
 
 export default function MainLayout({ children }: { children: ReactNode }) {
@@ -32,7 +33,9 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen w-full flex-col">
       <Header />
-      <main className="flex-1">{children}</main>
+      <main className="flex-1">
+        <ErrorBoundary>{children}</ErrorBoundary>
+      </main>
     </div>
   );
 }

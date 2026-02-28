@@ -1,16 +1,13 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { extractBoxId } from '@/lib/qr-utils';
+import { useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
-import { QrCode, Inbox, CheckCircle2, Download, Upload, Printer, Package, Clock, Box as BoxesIcon } from "lucide-react";
+import { QrCode, Inbox, Download, Upload, Printer, Package, Clock, Box as BoxesIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import jsQR from "jsqr";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import type { Item, Box } from '@/lib/types';
 import { collection, query, where, orderBy } from 'firebase/firestore';
@@ -19,11 +16,10 @@ import InventoryStats from '@/components/inventory-stats';
 import { useBoxLabels } from '@/hooks/use-box-labels';
 import { itemsToCsv, downloadCsv } from '@/lib/export';
 import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
 import RecentItems from '@/components/recent-items';
 import ImportCsvDialog from '@/components/import-csv-dialog';
 import PrintLabelsDialog from '@/components/print-labels-dialog';
-type ScanStatus = 'idle' | 'scanning' | 'success' | 'error';
+import QrScanner from '@/components/qr-scanner';
 
 export default function MainPage() {
   const [isScanModalOpen, setIsScanModalOpen] = useState(false);
@@ -31,17 +27,9 @@ export default function MainPage() {
   const [isPrintOpen, setIsPrintOpen] = useState(false);
   const [boxId, setBoxId] = useState('');
   const router = useRouter();
-  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
-  const [scanStatus, setScanStatus] = useState<ScanStatus>('idle');
-  const [scanError, setScanError] = useState('');
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  // animationFrameId no longer needed — using setInterval for consistent scan rate
 
   const { user } = useUser();
   const firestore = useFirestore();
-
-  // extractBoxId is now imported from @/lib/qr-utils
 
   const itemsQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
@@ -79,129 +67,11 @@ export default function MainPage() {
       return sortedBoxes;
   }, [items]);
 
-  const stopCameraStream = useCallback(() => {
-    if (videoRef.current && videoRef.current.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach(track => track.stop());
-        videoRef.current.srcObject = null;
-    }
-  }, []);
-
-  useEffect(() => {
-    if (isScanModalOpen) {
-      setHasCameraPermission(null);
-      setScanStatus('idle');
-      setScanError('');
-      const getCameraPermission = async () => {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { 
-              facingMode: "environment",
-              width: { ideal: 1280 },
-              height: { ideal: 720 },
-              // @ts-expect-error - focusMode is supported in modern browsers but not in TS types
-              focusMode: { ideal: "continuous" },
-            } 
-          });
-          setHasCameraPermission(true);
-          setScanStatus('scanning');
-
-          if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-          }
-        } catch (error) {
-          console.error('Error accessing camera:', error);
-          setHasCameraPermission(false);
-          setScanStatus('error');
-          setScanError('Camera access denied. Please enable camera permissions.');
-        }
-      };
-
-      getCameraPermission();
-    } else {
-        stopCameraStream();
-        setScanStatus('idle');
-        setScanError('');
-    }
-
-    return () => {
-        stopCameraStream();
-    }
-  }, [isScanModalOpen, stopCameraStream]);
-
-  useEffect(() => {
-    let intervalId: ReturnType<typeof setInterval> | undefined;
-    // Downscale target for faster jsQR processing
-    const SCAN_WIDTH = 640;
-
-    const tick = () => {
-      if (videoRef.current && videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA && canvasRef.current) {
-        const video = videoRef.current;
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-        if (ctx) {
-            // Downscale for faster processing — QR codes don't need full resolution
-            const scale = Math.min(1, SCAN_WIDTH / video.videoWidth);
-            canvas.width = Math.round(video.videoWidth * scale);
-            canvas.height = Math.round(video.videoHeight * scale);
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            try {
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                const code = jsQR(imageData.data, imageData.width, imageData.height, {
-                    inversionAttempts: "dontInvert",
-                });
-
-                if (code) {
-                    const boxId = extractBoxId(code.data);
-                    if (boxId) {
-                        setScanStatus('success');
-                        stopCameraStream();
-                        if (intervalId) clearInterval(intervalId);
-                        // Brief delay to show success animation
-                        setTimeout(() => {
-                            router.push(`/box?id=${boxId}`);
-                        }, 500);
-                    } else {
-                        setScanStatus('error');
-                        setScanError('Invalid QR code format. Please scan a valid box QR code.');
-                        stopCameraStream();
-                        if (intervalId) clearInterval(intervalId);
-                        // Reset after showing error
-                        setTimeout(() => {
-                            setScanStatus('scanning');
-                            navigator.mediaDevices.getUserMedia({ 
-                              video: { 
-                                facingMode: "environment",
-                                width: { ideal: 1280 },
-                                height: { ideal: 720 },
-                              } 
-                            }).then(stream => {
-                                if (videoRef.current) {
-                                    videoRef.current.srcObject = stream;
-                                }
-                            });
-                        }, 2000);
-                    }
-                }
-            } catch {
-                // jsQR processing error — continue scanning
-            }
-        }
-      }
-    };
-
-    if (hasCameraPermission === true && isScanModalOpen && scanStatus === 'scanning') {
-        // Scan every 80ms (~12fps) — fast enough for responsive scanning, light on CPU
-        intervalId = setInterval(tick, 80);
-    }
-
-    return () => {
-        if (intervalId) clearInterval(intervalId);
-    }
-
-  }, [hasCameraPermission, isScanModalOpen, scanStatus, router, stopCameraStream]);
-
+  const handleQrScan = useCallback((scannedBoxId: string) => {
+    setTimeout(() => {
+      router.push(`/box?id=${scannedBoxId}`);
+    }, 500);
+  }, [router]);
 
   const handleGoToBox = () => {
     if (boxId) {
@@ -240,7 +110,7 @@ export default function MainPage() {
                   <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                       <CardTitle className="text-sm font-medium">Total Boxes</CardTitle>
-                      <BoxesIcon className="h-4 w-4 text-muted-foreground" />
+                      <BoxesIcon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">{boxes.length}</div>
@@ -249,7 +119,7 @@ export default function MainPage() {
                   <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                       <CardTitle className="text-sm font-medium">Total Items</CardTitle>
-                      <Package className="h-4 w-4 text-muted-foreground" />
+                      <Package className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">{items?.length || 0}</div>
@@ -258,7 +128,7 @@ export default function MainPage() {
                   <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                       <CardTitle className="text-sm font-medium">Recent Activity</CardTitle>
-                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <Clock className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
@@ -283,15 +153,15 @@ export default function MainPage() {
                             }}
                           >
                             <Download className="mr-2 h-5 w-5" />
-                            Export
+                            <span className="hidden sm:inline">Export</span>
                           </Button>
                           <Button variant="outline" onClick={() => setIsImportOpen(true)}>
                             <Upload className="mr-2 h-5 w-5" />
-                            Import
+                            <span className="hidden sm:inline">Import</span>
                           </Button>
                           <Button variant="outline" onClick={() => setIsPrintOpen(true)}>
                             <Printer className="mr-2 h-5 w-5" />
-                            Labels
+                            <span className="hidden sm:inline">Labels</span>
                           </Button>
                         </>
                       )}
@@ -330,69 +200,11 @@ export default function MainPage() {
           <DialogHeader>
             <DialogTitle>Scan Box</DialogTitle>
             <DialogDescription>
-              Point your camera at a box's QR code or enter the UUID manually.
+              Point your camera at a box&apos;s QR code or enter the UUID manually.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="relative w-full aspect-video rounded-md border bg-muted overflow-hidden flex items-center justify-center">
-                <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
-                <canvas ref={canvasRef} className="hidden" />
-
-                {/* Scanning overlay with corner guides */}
-                {scanStatus === 'scanning' && (
-                    <div className="absolute inset-0 pointer-events-none">
-                        {/* Semi-transparent overlay */}
-                        <div className="absolute inset-0 bg-black/30" />
-
-                        {/* Scanning frame with corner guides */}
-                        <div className="absolute inset-0 flex items-center justify-center p-8">
-                            <div className="relative w-full max-w-[280px] aspect-square">
-                                {/* Corner guides */}
-                                <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-cyan-400 rounded-tl-lg" />
-                                <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-cyan-400 rounded-tr-lg" />
-                                <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-cyan-400 rounded-bl-lg" />
-                                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-cyan-400 rounded-br-lg" />
-
-                                {/* Scanning line animation */}
-                                <div className="absolute inset-x-0 top-1/2 h-0.5 bg-cyan-400 animate-pulse" />
-
-                                {/* Instruction text */}
-                                <div className="absolute -bottom-12 left-0 right-0 text-center">
-                                    <p className="text-white text-sm font-medium drop-shadow-lg">
-                                        Searching for QR code...
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Success state */}
-                {scanStatus === 'success' && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-green-600/90 backdrop-blur-sm">
-                        <CheckCircle2 className="h-16 w-16 text-white mb-4 animate-pulse" />
-                        <p className="text-white text-lg font-semibold">QR Code Detected!</p>
-                        <p className="text-white/80 text-sm">Navigating to box...</p>
-                    </div>
-                )}
-
-                {/* Error state */}
-                {scanStatus === 'error' && scanError && (
-                    <div className="absolute inset-0 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-                        <Alert variant="destructive" className="max-w-sm">
-                            <AlertTitle>Error</AlertTitle>
-                            <AlertDescription>{scanError}</AlertDescription>
-                        </Alert>
-                    </div>
-                )}
-
-                {/* Camera permission request */}
-                {hasCameraPermission === null && scanStatus === 'idle' && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <p className="text-muted-foreground">Requesting camera...</p>
-                    </div>
-                )}
-            </div>
+            <QrScanner active={isScanModalOpen} onScan={handleQrScan} />
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="box-id" className="text-right">
                 Box UUID
