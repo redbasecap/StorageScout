@@ -25,6 +25,8 @@
 		F10016 /* CSVExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20016; };
 		F10017 /* QRCodeGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20017; };
 		F10018 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F20018; };
+		F10019 /* CameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20020; };
+		F10020 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20021; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -47,6 +49,8 @@
 		F20017 /* QRCodeGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCodeGenerator.swift; sourceTree = "<group>"; };
 		F20018 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F20019 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		F20020 /* CameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraView.swift; sourceTree = "<group>"; };
+		F20021 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		F30001 /* StorageScout.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StorageScout.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -123,6 +127,8 @@
 			children = (
 				F20016 /* CSVExporter.swift */,
 				F20017 /* QRCodeGenerator.swift */,
+				F20020 /* CameraView.swift */,
+				F20021 /* Theme.swift */,
 			);
 			path = Utils;
 			sourceTree = "<group>";
@@ -213,6 +219,8 @@
 				F10015 /* SettingsView.swift in Sources */,
 				F10016 /* CSVExporter.swift in Sources */,
 				F10017 /* QRCodeGenerator.swift in Sources */,
+				F10019 /* CameraView.swift in Sources */,
+				F10020 /* Theme.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

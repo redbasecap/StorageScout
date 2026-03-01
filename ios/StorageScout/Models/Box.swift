@@ -7,6 +7,7 @@ final class Box {
     var name: String
     var location: String
     var createdAt: Date
+    var photoData: Data?
     
     @Relationship
     var items: [Item]
@@ -17,6 +18,7 @@ final class Box {
         self.location = location
         self.createdAt = Date()
         self.items = []
+        self.photoData = nil
     }
     
     /// Short ID for display (first 8 chars of UUID)

@@ -10,67 +10,69 @@ struct ItemDetailView: View {
     
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                // Photos
+            VStack(spacing: 0) {
+                // Photos carousel
                 if !item.photoData.isEmpty {
                     TabView {
                         ForEach(Array(item.photoData.enumerated()), id: \.offset) { index, data in
                             if let uiImage = UIImage(data: data) {
                                 Image(uiImage: uiImage)
                                     .resizable()
-                                    .scaledToFit()
-                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                    .scaledToFill()
+                                    .frame(height: 280)
+                                    .clipped()
                                     .onTapGesture {
                                         selectedPhotoIndex = index
                                     }
                             }
                         }
                     }
-                    .tabViewStyle(.page)
-                    .frame(height: 250)
+                    .tabViewStyle(.page(indexDisplayMode: item.photoData.count > 1 ? .always : .never))
+                    .frame(height: 280)
                 }
                 
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 20) {
                     // Description
                     if !item.itemDescription.isEmpty {
                         Text(item.itemDescription)
+                            .font(.body)
                             .foregroundStyle(.secondary)
+                            .padding(.horizontal, 4)
                     }
                     
-                    Divider()
-                    
-                    // Info rows
-                    if let box = item.box {
-                        InfoRow(icon: "shippingbox", label: "Box", value: box.name)
+                    // Info card
+                    VStack(spacing: 1) {
+                        if let box = item.box {
+                            InfoCardRow(icon: "shippingbox.fill", label: "Box", value: box.name)
+                        }
+                        if !item.location.isEmpty {
+                            InfoCardRow(icon: "mappin", label: "Location", value: item.location)
+                        }
+                        InfoCardRow(icon: "calendar", label: "Added", value: item.createdAt.formatted(date: .abbreviated, time: .shortened))
                     }
-                    
-                    if !item.location.isEmpty {
-                        InfoRow(icon: "mappin", label: "Location", value: item.location)
-                    }
-                    
-                    InfoRow(icon: "calendar", label: "Added", value: item.createdAt.formatted(date: .abbreviated, time: .shortened))
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: AppTheme.cardRadius))
                     
                     // Tags
                     if !item.tags.isEmpty {
-                        Divider()
-                        VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 10) {
                             Text("Tags")
-                                .font(.subheadline)
+                                .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.secondary)
-                            FlowLayout(spacing: 6) {
+                            
+                            FlowLayout(spacing: 8) {
                                 ForEach(item.tags, id: \.self) { tag in
                                     Text(tag)
-                                        .font(.caption)
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 5)
-                                        .background(.blue.opacity(0.1))
-                                        .clipShape(Capsule())
+                                        .font(.subheadline)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(.blue.opacity(0.08), in: Capsule())
+                                        .foregroundStyle(.blue)
                                 }
                             }
                         }
                     }
                 }
-                .padding(.horizontal)
+                .padding()
             }
         }
         .navigationTitle(item.name)
@@ -112,22 +114,6 @@ struct ItemDetailView: View {
     }
 }
 
-struct InfoRow: View {
-    let icon: String
-    let label: String
-    let value: String
-    
-    var body: some View {
-        HStack {
-            Label(label, systemImage: icon)
-                .foregroundStyle(.secondary)
-                .frame(width: 110, alignment: .leading)
-            Text(value)
-        }
-        .font(.subheadline)
-    }
-}
-
 extension Int: @retroactive Identifiable {
     public var id: Int { self }
 }
@@ -163,6 +149,7 @@ struct PhotoFullScreenView: View {
                     .padding()
             }
         }
+        .statusBarHidden()
         .onAppear { currentIndex = initialIndex }
     }
 }

@@ -3,6 +3,7 @@ import SwiftData
 
 struct SearchView: View {
     @Query(sort: \Item.name) private var allItems: [Item]
+    @Query(sort: \Box.name) private var allBoxes: [Box]
     @State private var searchText = ""
     
     private var filteredItems: [Item] {
@@ -17,30 +18,75 @@ struct SearchView: View {
         }
     }
     
+    private var filteredBoxes: [Box] {
+        guard !searchText.trimmingCharacters(in: .whitespaces).isEmpty else { return [] }
+        let lower = searchText.lowercased()
+        return allBoxes.filter {
+            $0.name.lowercased().contains(lower) ||
+            $0.location.lowercased().contains(lower)
+        }
+    }
+    
     var body: some View {
-        List {
+        Group {
             if searchText.isEmpty {
-                ContentUnavailableView(
-                    "Search Items",
-                    systemImage: "magnifyingglass",
-                    description: Text("Search by name, description, location, tags, or box.")
+                EmptyStateView(
+                    icon: "magnifyingglass",
+                    title: "Search Everything",
+                    subtitle: "Find items by name, description, location, tags, or box."
                 )
-            } else if filteredItems.isEmpty {
-                ContentUnavailableView.search(text: searchText)
+            } else if filteredItems.isEmpty && filteredBoxes.isEmpty {
+                EmptyStateView(
+                    icon: "magnifyingglass",
+                    title: "No Results",
+                    subtitle: "Nothing matched \"\(searchText)\". Try a different search."
+                )
             } else {
-                Text("\(filteredItems.count) result\(filteredItems.count == 1 ? "" : "s")")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .listRowBackground(Color.clear)
-                
-                ForEach(filteredItems) { item in
-                    NavigationLink(destination: ItemDetailView(item: item)) {
-                        ItemRowView(item: item)
+                List {
+                    if !filteredBoxes.isEmpty {
+                        Section("Boxes") {
+                            ForEach(filteredBoxes) { box in
+                                NavigationLink(destination: BoxDetailView(box: box)) {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "shippingbox.fill")
+                                            .foregroundStyle(.blue)
+                                            .frame(width: 32)
+                                        
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(box.name)
+                                                .font(.body.weight(.medium))
+                                            if !box.location.isEmpty {
+                                                Text(box.location)
+                                                    .font(.caption)
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                        }
+                                        
+                                        Spacer()
+                                        
+                                        Text("\(box.items.count) items")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    if !filteredItems.isEmpty {
+                        Section("Items (\(filteredItems.count))") {
+                            ForEach(filteredItems) { item in
+                                NavigationLink(destination: ItemDetailView(item: item)) {
+                                    ItemRowView(item: item)
+                                }
+                            }
+                        }
                     }
                 }
+                .listStyle(.plain)
             }
         }
         .navigationTitle("Search")
-        .searchable(text: $searchText, prompt: "Search items…")
+        .searchable(text: $searchText, prompt: "Items, boxes, locations…")
     }
 }

@@ -1,56 +1,199 @@
 import SwiftUI
 import AVFoundation
 
-struct QRScannerView: UIViewControllerRepresentable {
+struct QRScannerView: View {
     let onCodeScanned: (String) -> Void
     @Environment(\.dismiss) private var dismiss
+    @State private var scannedCode: String?
+    @State private var showPermissionDenied = false
+    @State private var torchOn = false
     
-    func makeUIViewController(context: Context) -> QRScannerViewController {
-        let vc = QRScannerViewController()
-        vc.onCodeScanned = { code in
-            onCodeScanned(code)
-            dismiss()
+    var body: some View {
+        ZStack {
+            // Camera layer
+            QRCameraPreview(onCodeScanned: { code in
+                guard scannedCode == nil else { return }
+                scannedCode = code
+                let generator = UIImpactFeedbackGenerator(style: .medium)
+                generator.impactOccurred()
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    onCodeScanned(code)
+                    dismiss()
+                }
+            }, showPermissionDenied: $showPermissionDenied)
+            .ignoresSafeArea()
+            
+            // Overlay
+            VStack {
+                // Top bar
+                HStack {
+                    Spacer()
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title)
+                            .symbolRenderingMode(.palette)
+                            .foregroundStyle(.white, .white.opacity(0.3))
+                    }
+                }
+                .padding()
+                
+                Spacer()
+                
+                // Scan frame
+                ZStack {
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(.white.opacity(0.6), lineWidth: 2)
+                        .frame(width: 260, height: 260)
+                        .background(
+                            RoundedRectangle(cornerRadius: 20)
+                                .fill(.clear)
+                        )
+                    
+                    // Corner accents
+                    ForEach(0..<4, id: \.self) { corner in
+                        CornerAccent()
+                            .rotationEffect(.degrees(Double(corner) * 90))
+                    }
+                    .frame(width: 260, height: 260)
+                    
+                    if scannedCode != nil {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 60))
+                            .foregroundStyle(.green)
+                            .transition(.scale.combined(with: .opacity))
+                    }
+                }
+                .animation(.spring(response: 0.3), value: scannedCode)
+                
+                Spacer()
+                
+                // Bottom label
+                VStack(spacing: 8) {
+                    Text("Scan Box QR Code")
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                    
+                    Text("Point the camera at a StorageScout QR code")
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.7))
+                }
+                .padding(.bottom, 60)
+            }
+            
+            // Permission denied overlay
+            if showPermissionDenied {
+                VStack(spacing: 16) {
+                    Image(systemName: "camera.fill")
+                        .font(.system(size: 48))
+                        .foregroundStyle(.secondary)
+                    
+                    Text("Camera Access Required")
+                        .font(.title3.weight(.semibold))
+                    
+                    Text("Enable camera access in Settings to scan QR codes.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                    
+                    Button("Open Settings") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            UIApplication.shared.open(url)
+                        }
+                    }
+                    .buttonStyle(PillButtonStyle())
+                    
+                    Button("Cancel") { dismiss() }
+                        .foregroundStyle(.secondary)
+                }
+                .padding(40)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24))
+                .padding()
+            }
+        }
+        .background(.black)
+        .statusBarHidden()
+    }
+}
+
+// MARK: - Corner Accent
+
+private struct CornerAccent: View {
+    var body: some View {
+        GeometryReader { geo in
+            Path { path in
+                let length: CGFloat = 30
+                let offset: CGFloat = 0
+                path.move(to: CGPoint(x: offset, y: offset + length))
+                path.addLine(to: CGPoint(x: offset, y: offset))
+                path.addLine(to: CGPoint(x: offset + length, y: offset))
+            }
+            .stroke(.white, style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
+        }
+    }
+}
+
+// MARK: - Camera Preview (UIKit)
+
+struct QRCameraPreview: UIViewControllerRepresentable {
+    let onCodeScanned: (String) -> Void
+    @Binding var showPermissionDenied: Bool
+    
+    func makeUIViewController(context: Context) -> QRCameraVC {
+        let vc = QRCameraVC()
+        vc.onCodeScanned = onCodeScanned
+        vc.onPermissionDenied = {
+            DispatchQueue.main.async {
+                showPermissionDenied = true
+            }
         }
         return vc
     }
     
-    func updateUIViewController(_ uiViewController: QRScannerViewController, context: Context) {}
+    func updateUIViewController(_ uiViewController: QRCameraVC, context: Context) {}
 }
 
-class QRScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
+class QRCameraVC: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
     var onCodeScanned: ((String) -> Void)?
+    var onPermissionDenied: (() -> Void)?
+    
     private var captureSession: AVCaptureSession?
     private var previewLayer: AVCaptureVideoPreviewLayer?
-    private var hasScanned = false
     
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .black
-        setupCamera()
-        setupUI()
+        checkPermissionAndSetup()
     }
     
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-        if let session = captureSession, !session.isRunning {
-            DispatchQueue.global(qos: .userInitiated).async {
-                session.startRunning()
+    private func checkPermissionAndSetup() {
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized:
+            setupCamera()
+        case .notDetermined:
+            AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
+                DispatchQueue.main.async {
+                    if granted {
+                        self?.setupCamera()
+                    } else {
+                        self?.onPermissionDenied?()
+                    }
+                }
             }
+        default:
+            onPermissionDenied?()
         }
-    }
-    
-    override func viewWillDisappear(_ animated: Bool) {
-        super.viewWillDisappear(animated)
-        captureSession?.stopRunning()
     }
     
     private func setupCamera() {
         let session = AVCaptureSession()
+        session.sessionPreset = .high
         captureSession = session
         
-        guard let device = AVCaptureDevice.default(for: .video),
+        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
               let input = try? AVCaptureDeviceInput(device: device) else {
-            showNoCameraLabel()
             return
         }
         
@@ -76,75 +219,23 @@ class QRScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsD
         }
     }
     
-    private func setupUI() {
-        // Scan frame overlay
-        let overlay = UIView()
-        overlay.translatesAutoresizingMaskIntoConstraints = false
-        overlay.layer.borderColor = UIColor.white.cgColor
-        overlay.layer.borderWidth = 2
-        overlay.layer.cornerRadius = 12
-        view.addSubview(overlay)
-        NSLayoutConstraint.activate([
-            overlay.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            overlay.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            overlay.widthAnchor.constraint(equalToConstant: 250),
-            overlay.heightAnchor.constraint(equalToConstant: 250)
-        ])
-        
-        let label = UILabel()
-        label.text = "Scan a Box QR Code"
-        label.textColor = .white
-        label.font = .systemFont(ofSize: 16, weight: .medium)
-        label.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(label)
-        NSLayoutConstraint.activate([
-            label.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            label.bottomAnchor.constraint(equalTo: overlay.topAnchor, constant: -20)
-        ])
-        
-        let closeButton = UIButton(type: .system)
-        closeButton.setImage(UIImage(systemName: "xmark.circle.fill"), for: .normal)
-        closeButton.tintColor = .white
-        closeButton.translatesAutoresizingMaskIntoConstraints = false
-        closeButton.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
-        view.addSubview(closeButton)
-        NSLayoutConstraint.activate([
-            closeButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
-            closeButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-            closeButton.widthAnchor.constraint(equalToConstant: 44),
-            closeButton.heightAnchor.constraint(equalToConstant: 44)
-        ])
-    }
-    
-    private func showNoCameraLabel() {
-        let label = UILabel()
-        label.text = "Camera not available"
-        label.textColor = .white
-        label.textAlignment = .center
-        label.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(label)
-        NSLayoutConstraint.activate([
-            label.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            label.centerYAnchor.constraint(equalTo: view.centerYAnchor)
-        ])
-    }
-    
-    @objc private func closeTapped() {
-        dismiss(animated: true)
-    }
-    
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         previewLayer?.frame = view.bounds
     }
     
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        captureSession?.stopRunning()
+    }
+    
+    // MARK: - AVCaptureMetadataOutputObjectsDelegate
+    
     func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput metadataObjects: [AVMetadataObject], from connection: AVCaptureConnection) {
-        guard !hasScanned,
-              let object = metadataObjects.first as? AVMetadataMachineReadableCodeObject,
+        guard let object = metadataObjects.first as? AVMetadataMachineReadableCodeObject,
               let code = object.stringValue else { return }
         
-        hasScanned = true
-        AudioServicesPlaySystemSound(SystemSoundID(kSystemSoundID_Vibrate))
+        captureSession?.stopRunning()
         onCodeScanned?(code)
     }
 }

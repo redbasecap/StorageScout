@@ -43,7 +43,8 @@ struct LocationsView: View {
                 Button {
                     showingAddLocation = true
                 } label: {
-                    Image(systemName: "plus")
+                    Image(systemName: "plus.circle.fill")
+                        .font(.body.weight(.medium))
                 }
             }
         }

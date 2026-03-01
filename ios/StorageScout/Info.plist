@@ -3,6 +3,6 @@
 <plist version="1.0">
 <dict>
     <key>NSCameraUsageDescription</key>
-    <string>StorageScout needs camera access to scan QR codes on your boxes.</string>
+    <string>StorageScout needs camera access to scan QR codes and take photos of your boxes and items.</string>
 </dict>
 </plist>

@@ -13,25 +13,25 @@ struct SettingsView: View {
     
     var body: some View {
         List {
-            Section("Statistics") {
-                StatRow(label: "Items", value: "\(items.count)", icon: "cube.box")
-                StatRow(label: "Boxes", value: "\(boxes.count)", icon: "shippingbox")
-                StatRow(label: "Locations", value: "\(locations.count)", icon: "mappin.and.ellipse")
-                
-                let tagCount = Set(items.flatMap { $0.tags }).count
-                StatRow(label: "Unique Tags", value: "\(tagCount)", icon: "tag")
+            // Stats overview
+            Section {
+                HStack(spacing: 12) {
+                    AnimatedCounter(value: items.count, label: "Items", icon: "cube.fill", color: .blue)
+                    AnimatedCounter(value: boxes.count, label: "Boxes", icon: "shippingbox.fill", color: .indigo)
+                    AnimatedCounter(value: locations.count, label: "Places", icon: "mappin", color: .orange)
+                }
+                .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16))
+                .listRowBackground(Color.clear)
             }
             
-            Section("Export") {
+            Section("Data") {
                 Button {
                     exportCSV()
                 } label: {
-                    Label("Export Items as CSV", systemImage: "square.and.arrow.up")
+                    Label("Export as CSV", systemImage: "square.and.arrow.up")
                 }
                 .disabled(items.isEmpty)
-            }
-            
-            Section("Import") {
+                
                 Button {
                     showingImportPicker = true
                 } label: {
@@ -39,7 +39,7 @@ struct SettingsView: View {
                 }
             }
             
-            Section("Data") {
+            Section {
                 Button(role: .destructive) {
                     showingDeleteAllAlert = true
                 } label: {
@@ -110,7 +110,6 @@ struct SettingsView: View {
         let lines = content.components(separatedBy: .newlines).filter { !$0.isEmpty }
         guard lines.count > 1 else { return }
         
-        // Skip header
         for line in lines.dropFirst() {
             let fields = parseCSVLine(line)
             guard fields.count >= 1 else { continue }
@@ -122,7 +121,6 @@ struct SettingsView: View {
             let tagsStr = fields.count > 4 ? fields[4] : ""
             let tags = tagsStr.split(separator: ";").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
             
-            // Find or create box
             var box: Box?
             if !boxName.isEmpty {
                 let existingBoxes = (try? modelContext.fetch(FetchDescriptor<Box>(predicate: #Predicate { $0.name == boxName }))) ?? []
@@ -135,7 +133,6 @@ struct SettingsView: View {
                 }
             }
             
-            // Create location if needed
             if !location.isEmpty {
                 let existingLocations = (try? modelContext.fetch(FetchDescriptor<Location>(predicate: #Predicate { $0.name == location }))) ?? []
                 if existingLocations.isEmpty {
@@ -199,22 +196,6 @@ struct SettingsView: View {
             try modelContext.delete(model: Location.self)
         } catch {
             print("Delete failed: \(error)")
-        }
-    }
-}
-
-struct StatRow: View {
-    let label: String
-    let value: String
-    let icon: String
-    
-    var body: some View {
-        HStack {
-            Label(label, systemImage: icon)
-            Spacer()
-            Text(value)
-                .foregroundStyle(.secondary)
-                .fontWeight(.medium)
         }
     }
 }

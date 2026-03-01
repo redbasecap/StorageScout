@@ -6,25 +6,30 @@ struct QRCodeView: View {
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 24) {
+            VStack(spacing: 28) {
+                Spacer()
+                
+                // QR Code
                 if let qrImage = QRCodeGenerator.generate(from: box.qrContent) {
                     Image(uiImage: qrImage)
                         .interpolation(.none)
                         .resizable()
                         .scaledToFit()
-                        .frame(width: 250, height: 250)
-                        .padding()
-                        .background(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                        .shadow(radius: 4)
+                        .frame(width: 240, height: 240)
+                        .padding(24)
+                        .background(.white, in: RoundedRectangle(cornerRadius: 24))
+                        .shadow(color: .black.opacity(0.08), radius: 16, x: 0, y: 4)
                 }
                 
-                VStack(spacing: 8) {
+                // Box info
+                VStack(spacing: 6) {
                     Text(box.name)
-                        .font(.title2.bold())
+                        .font(.title2.weight(.bold))
+                    
                     Text(box.shortId)
                         .font(.subheadline.monospaced())
                         .foregroundStyle(.secondary)
+                    
                     if !box.location.isEmpty {
                         Label(box.location, systemImage: "mappin")
                             .font(.subheadline)
@@ -32,24 +37,32 @@ struct QRCodeView: View {
                     }
                 }
                 
-                ShareLink(item: box.qrContent) {
-                    Label("Share Box ID", systemImage: "square.and.arrow.up")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .padding(.horizontal, 40)
+                Spacer()
                 
-                if let qrImage = QRCodeGenerator.generate(from: box.qrContent) {
-                    ShareLink(
-                        item: Image(uiImage: qrImage),
-                        preview: SharePreview("QR Code for \(box.name)", image: Image(uiImage: qrImage))
-                    ) {
-                        Label("Share QR Image", systemImage: "photo")
+                // Share buttons
+                VStack(spacing: 12) {
+                    ShareLink(item: box.qrContent) {
+                        Label("Share Box ID", systemImage: "square.and.arrow.up")
                             .frame(maxWidth: .infinity)
+                            .padding(.vertical, 4)
                     }
-                    .buttonStyle(.bordered)
-                    .padding(.horizontal, 40)
+                    .buttonStyle(.borderedProminent)
+                    .tint(.blue)
+                    
+                    if let qrImage = QRCodeGenerator.generate(from: box.qrContent) {
+                        ShareLink(
+                            item: Image(uiImage: qrImage),
+                            preview: SharePreview("QR Code — \(box.name)", image: Image(uiImage: qrImage))
+                        ) {
+                            Label("Share QR Image", systemImage: "photo")
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 4)
+                        }
+                        .buttonStyle(.bordered)
+                    }
                 }
+                .padding(.horizontal, 32)
+                .padding(.bottom, 20)
             }
             .padding()
             .navigationTitle("QR Code")
@@ -57,6 +70,7 @@ struct QRCodeView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { dismiss() }
+                        .fontWeight(.medium)
                 }
             }
         }

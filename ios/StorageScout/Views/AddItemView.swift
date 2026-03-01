@@ -17,28 +17,36 @@ struct AddItemView: View {
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var photoData: [Data] = []
     @State private var showingCamera = false
+    @FocusState private var nameFieldFocused: Bool
     
     var editingItem: Item?
     
     var body: some View {
         NavigationStack {
             Form {
-                Section("Details") {
+                Section {
                     TextField("Name", text: $name)
+                        .font(.body.weight(.medium))
+                        .focused($nameFieldFocused)
+                    
                     TextField("Description", text: $itemDescription, axis: .vertical)
                         .lineLimit(3...6)
+                } header: {
+                    Text("Details")
                 }
                 
-                Section("Box") {
+                Section {
                     Picker("Box", selection: $selectedBox) {
                         Text("None").tag(nil as Box?)
                         ForEach(boxes) { box in
                             Text(box.name).tag(box as Box?)
                         }
                     }
+                } header: {
+                    Text("Box")
                 }
                 
-                Section("Location") {
+                Section {
                     if locations.isEmpty {
                         TextField("Location", text: $location)
                     } else {
@@ -50,41 +58,65 @@ struct AddItemView: View {
                         }
                         TextField("Or enter new…", text: $location)
                     }
+                } header: {
+                    Text("Location")
                 }
                 
-                Section("Tags") {
+                Section {
                     HStack {
                         TextField("Add tag", text: $tagInput)
                             .onSubmit { addTag() }
-                        Button("Add") { addTag() }
-                            .disabled(tagInput.trimmingCharacters(in: .whitespaces).isEmpty)
+                        
+                        Button {
+                            addTag()
+                        } label: {
+                            Image(systemName: "plus.circle.fill")
+                                .foregroundStyle(.blue)
+                        }
+                        .disabled(tagInput.trimmingCharacters(in: .whitespaces).isEmpty)
                     }
+                    
                     if !tags.isEmpty {
                         FlowLayout(spacing: 6) {
                             ForEach(tags, id: \.self) { tag in
                                 HStack(spacing: 4) {
                                     Text(tag)
-                                        .font(.caption)
+                                        .font(.subheadline)
                                     Button {
-                                        tags.removeAll { $0 == tag }
+                                        withAnimation { tags.removeAll { $0 == tag } }
                                     } label: {
                                         Image(systemName: "xmark.circle.fill")
-                                            .font(.caption2)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
                                     }
                                 }
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(.blue.opacity(0.1))
-                                .clipShape(Capsule())
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(.blue.opacity(0.08), in: Capsule())
                             }
                         }
                     }
+                } header: {
+                    Text("Tags")
                 }
                 
-                Section("Photos") {
-                    PhotosPicker(selection: $selectedPhotos, maxSelectionCount: 5, matching: .images) {
-                        Label("Choose from Library", systemImage: "photo.on.rectangle")
+                Section {
+                    HStack(spacing: 12) {
+                        PhotosPicker(selection: $selectedPhotos, maxSelectionCount: 5, matching: .images) {
+                            Label("Library", systemImage: "photo.on.rectangle")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                        
+                        Button {
+                            showingCamera = true
+                        } label: {
+                            Label("Camera", systemImage: "camera")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
                     }
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                     .onChange(of: selectedPhotos) { _, newItems in
                         Task {
                             for item in newItems {
@@ -98,7 +130,7 @@ struct AddItemView: View {
                     
                     if !photoData.isEmpty {
                         ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
+                            HStack(spacing: 10) {
                                 ForEach(Array(photoData.enumerated()), id: \.offset) { index, data in
                                     if let uiImage = UIImage(data: data) {
                                         ZStack(alignment: .topTrailing) {
@@ -106,15 +138,17 @@ struct AddItemView: View {
                                                 .resizable()
                                                 .scaledToFill()
                                                 .frame(width: 80, height: 80)
-                                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                                                .clipShape(RoundedRectangle(cornerRadius: 10))
                                             
                                             Button {
-                                                photoData.remove(at: index)
+                                                withAnimation { photoData.remove(at: index) }
                                             } label: {
                                                 Image(systemName: "xmark.circle.fill")
+                                                    .symbolRenderingMode(.palette)
                                                     .foregroundStyle(.white, .red)
+                                                    .font(.body)
                                             }
-                                            .offset(x: 4, y: -4)
+                                            .offset(x: 6, y: -6)
                                         }
                                     }
                                 }
@@ -122,6 +156,8 @@ struct AddItemView: View {
                             .padding(.vertical, 4)
                         }
                     }
+                } header: {
+                    Text("Photos")
                 }
             }
             .navigationTitle(editingItem == nil ? "Add Item" : "Edit Item")
@@ -132,7 +168,13 @@ struct AddItemView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { save() }
+                        .fontWeight(.semibold)
                         .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+            .fullScreenCover(isPresented: $showingCamera) {
+                CameraView { data in
+                    photoData.append(data)
                 }
             }
             .onAppear {
@@ -143,6 +185,8 @@ struct AddItemView: View {
                     location = item.location
                     tags = item.tags
                     photoData = item.photoData
+                } else {
+                    nameFieldFocused = true
                 }
             }
         }
@@ -151,7 +195,7 @@ struct AddItemView: View {
     private func addTag() {
         let tag = tagInput.trimmingCharacters(in: .whitespaces)
         if !tag.isEmpty && !tags.contains(tag) {
-            tags.append(tag)
+            withAnimation { tags.append(tag) }
         }
         tagInput = ""
     }
@@ -159,10 +203,8 @@ struct AddItemView: View {
     private func save() {
         let trimmedLocation = location.trimmingCharacters(in: .whitespaces)
         
-        // Auto-create location if it doesn't exist
         if !trimmedLocation.isEmpty && !locations.contains(where: { $0.name == trimmedLocation }) {
-            let newLocation = Location(name: trimmedLocation)
-            modelContext.insert(newLocation)
+            modelContext.insert(Location(name: trimmedLocation))
         }
         
         if let item = editingItem {

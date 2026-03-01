@@ -1,29 +1,29 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var selectedTab: Tab = .items
+    @State private var selectedTab: Tab = .boxes
     
-    enum Tab {
-        case items, boxes, locations, search, settings
+    enum Tab: String {
+        case boxes, items, search, settings
     }
     
     var body: some View {
         TabView(selection: $selectedTab) {
             NavigationStack {
-                ItemsListView()
-            }
-            .tabItem {
-                Label("Items", systemImage: "cube.box")
-            }
-            .tag(Tab.items)
-            
-            NavigationStack {
                 BoxesListView()
             }
             .tabItem {
-                Label("Boxes", systemImage: "shippingbox")
+                Label("Boxes", systemImage: "shippingbox.fill")
             }
             .tag(Tab.boxes)
+            
+            NavigationStack {
+                ItemsListView()
+            }
+            .tabItem {
+                Label("Items", systemImage: "cube.fill")
+            }
+            .tag(Tab.items)
             
             NavigationStack {
                 SearchView()
@@ -34,20 +34,13 @@ struct ContentView: View {
             .tag(Tab.search)
             
             NavigationStack {
-                LocationsView()
-            }
-            .tabItem {
-                Label("Locations", systemImage: "mappin.and.ellipse")
-            }
-            .tag(Tab.locations)
-            
-            NavigationStack {
                 SettingsView()
             }
             .tabItem {
-                Label("Settings", systemImage: "gearshape")
+                Label("Settings", systemImage: "gearshape.fill")
             }
             .tag(Tab.settings)
         }
+        .tint(.blue)
     }
 }
